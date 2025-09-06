@@ -1,6 +1,11 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <FreeRTOS.h>
+// #include <FreeRTOS.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/task.h"
 
 #include <HTTPClient.h>
 #include <PubSubClient.h>
@@ -73,18 +78,17 @@ void loop() {}
 
 void taskHandleRGBLed(void *pvParameters)
 {
-  while (1)
+  uint16_t hue = 0;          // 0–65535 in Adafruit helper
+  const uint16_t step = 256; // how fast to move (≈1°/frame)
+  for (;;)
   {
-    // float cpuTemperature = temperatureRead();
-    // printf("CPU temperature: %f\n", cpuTemperature);
+    // For a single LED
+    uint32_t color = strip.gamma32(strip.ColorHSV(hue, 255, 255));
+    strip.setPixelColor(0, color);
 
-    strip.setPixelColor(0, strip.Color(ledColor % 255, 56, ledColor % 255)); // green
     strip.show();
-    printf("Led color: %d\n", ledColor);
-    ledColor++;
-    // delay(1000);
-
-    vTaskDelay(pdMS_TO_TICKS(100));
+    hue += step;                   // wrap automatically on overflow
+    vTaskDelay(pdMS_TO_TICKS(20)); // ~50 FPS
   }
 }
 
