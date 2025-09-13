@@ -7,10 +7,22 @@
 #include <HTTPClient.h>
 #include <PubSubClient.h>
 
-
 #include "wifi_conn.h"
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
 
 // Constants
+
+// TODO: move to my library BME280
+#define BME_SCK 13
+#define BME_MISO 12
+#define BME_MOSI 11
+#define BME_CS 10
+#define SEALEVELPRESSURE_HPA (1013.25)
+Adafruit_BME280 bme; // I2C
+unsigned long delayTime;
+
 
 // Addressable RGB LED, driven by GPIO48.
 #define LED_PIN 48
@@ -28,6 +40,7 @@ PubSubClient client(net);
 // put function declarations here:
 void taskHandleRGBLed(void *pvParameters);
 void taskReadTemperature(void *pvParameters);
+void readTemperatureFromBME280();
 
 void setup()
 {
@@ -73,4 +86,20 @@ void taskReadTemperature(void *pvParameters)
 
     vTaskDelay(pdMS_TO_TICKS(1200));
   }
+}
+
+
+void readTemperatureFromBME280(){
+      if (! bme.begin(0x77, &Wire)) {
+        Serial.println("Could not find a valid BME280 sensor, check wiring!");
+        while (1);
+    }
+
+  Serial.print("Temp: ");
+  Serial.print(bme.readTemperature());
+  Serial.print(" °C  Hum: ");
+  Serial.print(bme.readHumidity());
+  Serial.print(" %  Pressure: ");
+  Serial.print(bme.readPressure() / 100.0F);
+  Serial.println(" hPa");
 }
