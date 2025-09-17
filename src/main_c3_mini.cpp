@@ -30,6 +30,13 @@ unsigned long delayTime;
 // MQTT stuff
 #define THINGNAME "esp32"
 #define TEMPERATURE_TOPIC "temperature/read"
+#define BME_280_TEMPERATURE_TOPIC "bme280/temperature/read"
+#define BME_280_PRESSURE_TOPIC "bme280/pressure/read"
+#define BME_280_HUMIDITY_TOPIC "bme280/humidity/read"
+#define RELAY_1_TOPIC_R "relay/1/read"
+#define RELAY_2_TOPIC_R "relay/2/read"
+#define RELAY_1_TOPIC_W "relay/3/write"
+#define RELAY_2_TOPIC_W "relay/4/write"
 
 // My rasberry pi server name
 const char *host = "raspberr ypi.local";
@@ -40,7 +47,8 @@ PubSubClient client(net);
 // put function declarations here:
 void taskHandleRGBLed(void *pvParameters);
 void taskReadTemperature(void *pvParameters);
-void readTemperatureFromBME280();
+void readTemperatureFromBME280(void *pvParameters);
+void relaysControl(void *pvParameters);
 
 void setup()
 {
@@ -57,12 +65,10 @@ void setup()
       Serial.println("☑ Connected to AWS IoT");
 
       Serial.println("☑ Connected!");
-      client.publish(TEMPERATURE_TOPIC, "{\"message\": \"Initialized the connection\"}");
-      // Create a message handler
-      // client.setCallback(messageHandler);
-      // client.subscribe(AWS_IOT_SUBSCRIBE_TOPIC);
-      // start task freeRTOS
+      // client.publish(TEMPERATURE_TOPIC, "{\"message\": \"Initialized the connection\"}");
+
       xTaskCreate(taskReadTemperature, "taskReadTemperature", 2048 * 4, NULL, 1, NULL);
+      xTaskCreate(readTemperatureFromBME280, "readTemperatureFromBME280", 2048 * 4, NULL, 1, NULL);
     }
     else
     {
@@ -89,17 +95,51 @@ void taskReadTemperature(void *pvParameters)
 }
 
 
-void readTemperatureFromBME280(){
-      if (! bme.begin(0x77, &Wire)) {
+void readTemperatureFromBME280(void *pvParameters){
+    if (! bme.begin(0x77, &Wire)) {
         Serial.println("Could not find a valid BME280 sensor, check wiring!");
         while (1);
     }
 
-  Serial.print("Temp: ");
-  Serial.print(bme.readTemperature());
-  Serial.print(" °C  Hum: ");
-  Serial.print(bme.readHumidity());
-  Serial.print(" %  Pressure: ");
-  Serial.print(bme.readPressure() / 100.0F);
-  Serial.println(" hPa");
+
+  while(1){
+    float temperature = bme.readTemperature();
+    float humidity = bme.readHumidity();
+    float pressure = bme.readPressure() / 100.0F;
+    String payload_temp = "{\"message\": \"" + String(temperature) + "\"}";
+    String payload_hum = "{\"message\": \"" + String(humidity) + "\"}";
+    String payload_press = "{\"message\": \"" + String(pressure) + "\"}";
+
+
+    Serial.print("Temp: ");
+    Serial.print(temperature);
+    Serial.print(" °C  Hum: ");
+    Serial.print(humidity);
+    Serial.print(" %  Pressure: ");
+    Serial.print(pressure);
+    Serial.println(" hPa");
+
+
+    client.publish(BME_280_TEMPERATURE_TOPIC, payload_temp.c_str());
+    client.publish(BME_280_HUMIDITY_TOPIC, payload_hum.c_str());
+    client.publish(BME_280_PRESSURE_TOPIC, payload_press.c_str());
+    vTaskDelay(pdMS_TO_TICKS(1200));
+  }
+}
+
+
+
+void relaysControl(void *pvParameters){
+  //control the relays 1 and 2
+  pinMode(26, OUTPUT); // TODO check pins
+  pinMode(27, OUTPUT);
+
+  client.subscribe(RELAY_1_TOPIC_W);
+  client.subscribe(RELAY_2_TOPIC_W);
+  while(1){
+    
+    vTaskDelay(pdMS_TO_TICKS(1200));
+
+    
+  }
 }
