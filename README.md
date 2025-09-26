@@ -1,5 +1,13 @@
 
 
+# Read the docs
+
+```sh
+cd docs
+mkdocs serve
+```
+
+
 
 # References, my hardware links
 

@@ -13,6 +13,11 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
+// Wireless code update and monitoring! Cool thing!
+#include <ArduinoOTA.h>
+#include <WiFiUdp.h>
+// #include <WebSerial.h>
+
 #include "wifi_conn.h"
 // #include "c3utils.h"
 
@@ -49,6 +54,12 @@ const char *host = "raspberrypi.local";
 WiFiClient net;
 PubSubClient client(net);
 
+// telnet for print messages via wifi minitor
+
+
+// WiFiServer telnetServer(23);
+// WiFiClient telnetClient;
+
 // --- Task handles (needed for stack monitoring) ---
 // TaskHandle_t hRelayTask = NULL;
 TaskHandle_t hMQTTTask = NULL;
@@ -63,6 +74,7 @@ void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the m
 void taskReadBME280(void *pvParameters);
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
 void relayActionTask(void *pv);
+void logMessage(const char *message);
 
 void setup()
 {
@@ -91,8 +103,28 @@ void setup()
             delay(2000);
         }
     }
-    Serial.println("Initialize watchdog");
+    /// telnet
+    // telnetServer.begin();
+    // telnetServer.setNoDelay(true);
+    ////
+    logMessage("Initialize watchdog");
     esp_task_wdt_init(WDT_TIMEOUT, true);
+
+    // Init wireless updates
+    Serial.println("Initialize OTA updates via Wireless");
+    Serial.println("UPDATE VIA OTA");
+    ArduinoOTA.setHostname("esp32c3"); // must match upload_port in platformio.ini
+    ArduinoOTA
+        .onStart([]()
+                 { Serial.println("OTA update start"); })
+        .onEnd([]()
+               { Serial.println("\nOTA update end"); })
+        .onProgress([](unsigned int progress, unsigned int total)
+                    { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); })
+        .onError([](ota_error_t error)
+                 { Serial.printf("Error[%u]: ", error); });
+
+    ArduinoOTA.begin();
 
     // xTaskCreatePinnedToCore(taskReceiveRelayCommand, "taskReceiveRelayCommand", 4096 * 4, NULL, 1, &hRelayTask, 0);
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 1, NULL, 1, &hMQTTTask, 0);
@@ -101,7 +133,11 @@ void setup()
     Serial.println("Tasks created, watchdog armed!");
 }
 
-void loop() { /* Empty loop */ }
+void loop()
+{
+    // Keep alive OTA wireless update process.
+    ArduinoOTA.handle();
+}
 
 // MQTT loop task
 void taskMQTT(void *pvParameters)
@@ -141,26 +177,6 @@ void relayActionTask(void *pv)
 // the mqtt callback:
 void mycallback(char *topic, byte *message, unsigned int length)
 {
-    // String messageTemp;
-    // for (int i = 0; i < length; i++)
-    // {
-    //     messageTemp += (char)message[i];
-    // }
-    // Serial.println(messageTemp);
-
-    // if (String(topic) == RELAY_1_SET_TOPIC)
-    // {
-    //     // in case of relay, the high state is OFF
-    //     if (messageTemp == "ON")
-    //     {
-    //         digitalWrite(D0, HIGH);
-    //     }
-    //     else
-    //     {
-    //         digitalWrite(D0, LOW);
-    //     }
-    // }
-
     String *msg = new String();
     for (unsigned int i = 0; i < length; i++)
     {
@@ -173,7 +189,7 @@ void mycallback(char *topic, byte *message, unsigned int length)
     }
     else
     {
-     Serial.println("Relay task already exists, skipping creation");   
+        Serial.println("Relay task already exists, skipping creation");
     }
 }
 
@@ -194,6 +210,7 @@ void taskReadBME280(void *pvParameters)
     }
     for (;;)
     {
+        // telnetServer.print("BME280 temperature: ");
         snprintf(buf, sizeof(buf), "%.2f", bme.readTemperature());
         client.publish(BME_TEMPERATURE_TOPIC, buf, true);
 
@@ -209,6 +226,14 @@ void taskReadBME280(void *pvParameters)
         esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+}
+
+
+void logMessage(const char *message)
+{
+    /// TODO add variadic funciont *fmt , .....
+    Serial.println(message);                   // local USB log
+    client.publish("log/debug", message);      // remote log via MQTT
 }
 
 // --- New task: monitor stack usage ---
