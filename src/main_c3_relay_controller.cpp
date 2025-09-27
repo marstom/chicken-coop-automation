@@ -1,4 +1,5 @@
 
+#include <stdarg.h>
 #include <Arduino.h>
 // #include <WiFi.h>
 // #include <FreeRTOS.h>
@@ -74,7 +75,7 @@ void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the m
 void taskReadBME280(void *pvParameters);
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
 void relayActionTask(void *pv);
-void logMessage(const char *message);
+void logMessage(const char *fmt, ...);
 
 void setup()
 {
@@ -90,7 +91,7 @@ void setup()
     {
         if (client.connect(THINGNAME))
         {
-            Serial.println("☑ Connected to RPI Broker!");
+            logMessage("☑ Connected to RPI Broker!");
             // Subscriptions here
             client.subscribe(RELAY_1_SET_TOPIC);
             ////////////
@@ -98,8 +99,8 @@ void setup()
         }
         else
         {
-            Serial.print("✖ Failed to connect, try again in 2 seconds, rc=");
-            Serial.print(client.state());
+            logMessage("✖ Failed to connect, try again in 2 seconds, rc=");
+            logMessage("%d", client.state());
             delay(2000);
         }
     }
@@ -111,14 +112,14 @@ void setup()
     esp_task_wdt_init(WDT_TIMEOUT, true);
 
     // Init wireless updates
-    Serial.println("Initialize OTA updates via Wireless");
-    Serial.println("UPDATE VIA OTA");
+    logMessage("Initialize OTA updates via Wireless");
+    logMessage("UPDATE VIA OTA");
     ArduinoOTA.setHostname("esp32c3"); // must match upload_port in platformio.ini
     ArduinoOTA
         .onStart([]()
-                 { Serial.println("OTA update start"); })
+                 { logMessage("OTA update start"); })
         .onEnd([]()
-               { Serial.println("\nOTA update end"); })
+               { logMessage("\nOTA update end"); })
         .onProgress([](unsigned int progress, unsigned int total)
                     { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); })
         .onError([](ota_error_t error)
@@ -130,7 +131,7 @@ void setup()
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 1, NULL, 1, &hMQTTTask, 0);
     xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 2, NULL, 1, &hBME280Task);
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
-    Serial.println("Tasks created, watchdog armed!");
+    logMessage("Tasks created, watchdog armed!");
 }
 
 void loop()
@@ -189,7 +190,7 @@ void mycallback(char *topic, byte *message, unsigned int length)
     }
     else
     {
-        Serial.println("Relay task already exists, skipping creation");
+        logMessage("Relay task already exists, skipping creation");
     }
 }
 
@@ -204,7 +205,7 @@ void taskReadBME280(void *pvParameters)
     {
         if (!bme.begin(0x77, &Wire))
         {
-            Serial.println("Could not find a valid BME280 sensor, check wiring!");
+            logMessage("Could not find a valid BME280 sensor, check wiring!");
             vTaskDelete(NULL); // delete task immediately if fails
         }
     }
@@ -229,11 +230,17 @@ void taskReadBME280(void *pvParameters)
 }
 
 
-void logMessage(const char *message)
+void logMessage(const char *fmt, ...)
 {
+    char buf[256];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    
     /// TODO add variadic funciont *fmt , .....
-    Serial.println(message);                   // local USB log
-    client.publish("log/debug", message);      // remote log via MQTT
+    Serial.println(buf);                   // local USB log
+    client.publish("log/debug", buf);      // remote log via MQTT
 }
 
 // --- New task: monitor stack usage ---
@@ -244,13 +251,13 @@ void taskStackMonitor(void *pvParameters)
     {
         if (hMQTTTask)
         {
-            Serial.printf("MQTTTask stack free: %u words (%u bytes)\n",
+            logMessage("MQTTTask stack free: %u words (%u bytes)\n",
                           uxTaskGetStackHighWaterMark(hMQTTTask),
                           uxTaskGetStackHighWaterMark(hMQTTTask) * 4);
         }
         if (hBME280Task)
         {
-            Serial.printf("BME280Task stack free: %u words (%u bytes)\n",
+            logMessage("BME280Task stack free: %u words (%u bytes)\n",
                           uxTaskGetStackHighWaterMark(hBME280Task),
                           uxTaskGetStackHighWaterMark(hBME280Task) * 4);
         }
