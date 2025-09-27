@@ -70,6 +70,11 @@ TaskHandle_t hRelayTask = NULL;
 /// make mqtt thread safe
 
 QueueHandle_t mqttQueue;
+QueueHandle_t relayQueue;
+
+struct RelayCommand {
+  bool on;
+};
 
 struct MqttMessage
 {
@@ -88,7 +93,6 @@ struct MqttMessage
     void sendToQueue(uint32_t timeout_ms = 10)
     {
         if (!mqttQueue) return; // guard
-        // if (xQueueSend(mqttQueue, this, pdMS_TO_TICKS(timeout_ms)) != pdTRUE) {
         xQueueSend(mqttQueue, this, portMAX_DELAY);
     }
 };
@@ -101,11 +105,12 @@ void taskReadBME280(void *pvParameters);
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
 void relayActionTask(void *pv);
 void logMessage(const char *fmt, ...);
+void taskRelay(void *pvParameters);
 
 void setup()
 {
     Serial.begin(9600);
-    mqttQueue = xQueueCreate(20, sizeof(MqttMessage));
+    mqttQueue = xQueueCreate(200, sizeof(MqttMessage));
 
     my::connect_to_wifi_with_wait();
     pinMode(D0, OUTPUT); // D0 as output
@@ -160,6 +165,10 @@ void setup()
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 1, NULL, 1, &hMQTTTask, 0);
     xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 2, NULL, 1, &hBME280Task);
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
+
+
+    relayQueue = xQueueCreate(2, sizeof(RelayCommand));
+    xTaskCreate(taskRelay, "RelayTask", 4096, NULL, 1, &hRelayTask);
     logMessage("Tasks created, watchdog armed!");
 }
 
@@ -187,48 +196,81 @@ void taskMQTT(void *pvParameters)
     }
 }
 
-void relayActionTask(void *pv)
-{
-    esp_task_wdt_add(NULL);
-    String *msg = (String *)pv;
-    logMessage("Async relay action: %s\n", msg->c_str());
+// void relayActionTask(void *pv)
+// {
+//     esp_task_wdt_add(NULL);
+//     String *msg = (String *)pv;
+//     // logMessage("Async relay action: %s\n", msg->c_str());
 
-    if (*msg == "ON")
-    {
+//     if (*msg == "ON")
+//     {
+//         digitalWrite(D0, LOW);
+//         // vTaskDelay(pdMS_TO_TICKS(6000));
+//         for (int i = 0; i < 60; i++)
+//         {
+//             vTaskDelay(pdMS_TO_TICKS(100));
+//             esp_task_wdt_reset();
+//         }
+//     }
+//     digitalWrite(D0, HIGH);
+//     // esp_task_wdt_reset();
+//     vTaskDelay(pdMS_TO_TICKS(100));
+//     delete msg;        // free heap
+//     hRelayTask = NULL; // release handler
+//     vTaskDelete(NULL); // destroy task after finish
+// }
+
+
+
+void taskRelay(void *pv) {
+  esp_task_wdt_add(NULL);
+  RelayCommand cmd;
+  for (;;) {
+    if (xQueueReceive(relayQueue, &cmd, portMAX_DELAY)) {
+      if (cmd.on) {
         digitalWrite(D0, LOW);
-        // vTaskDelay(pdMS_TO_TICKS(6000));
-        for (int i = 0; i < 60; i++)
-        {
-            vTaskDelay(pdMS_TO_TICKS(100));
-            esp_task_wdt_reset();
-        }
+        vTaskDelay(pdMS_TO_TICKS(6000));
+        digitalWrite(D0, HIGH);
+      } else {
+        digitalWrite(D0, HIGH);
+      }
     }
-    digitalWrite(D0, HIGH);
-    // esp_task_wdt_reset();
-    vTaskDelay(pdMS_TO_TICKS(100));
-    delete msg;        // free heap
-    hRelayTask = NULL; // release handler
-    vTaskDelete(NULL); // destroy task after finish
+    esp_task_wdt_reset();
+  }
 }
 
 // the mqtt callback:
 void mycallback(char *topic, byte *message, unsigned int length)
 {
-    String *msg = new String();
+
+
+    String msgTemp = "";
     for (unsigned int i = 0; i < length; i++)
     {
-        *msg += (char)message[i];
+        msgTemp += (char)message[i];
     }
 
-    if (hRelayTask == NULL)
-    {
-        xTaskCreate(relayActionTask, "RelayAction", 4096, msg, 1, &hRelayTask);
-    }
-    else
-    {
-        logMessage("Relay task already exists, skipping creation");
-    }
-    delete msg;
+    RelayCommand cmd;
+    cmd.on = (msgTemp == "ON");
+    xQueueSend(relayQueue, &cmd, 0);
+
+    // logMessage("Message arrived on topic: %s", topic);
+    // logMessage("Message is: %s", message);
+    // for (unsigned int i = 0; i < length; i++)
+    // {
+    //     *msg += (char)message[i];
+    // }
+    // // logMessage("Formatted: %s", msg);
+
+    // if (hRelayTask == NULL)
+    // {
+    //     xTaskCreate(relayActionTask, "RelayAction", 4096, msg, 1, &hRelayTask);
+    // }
+    // else
+    // {
+    //     logMessage("Relay task already exists, skipping creation");
+    //     delete msg;
+    // }
 }
 
 void taskReadBME280(void *pvParameters)
@@ -282,8 +324,8 @@ void logMessage(const char *fmt, ...)
     Serial.println(buf);              // local USB log
 
     MqttMessage msg;
-    msg.setContent("log/debug", buf);
-    msg.sendToQueue(0);
+    msg.setContent("log/mydebug", buf);
+    msg.sendToQueue();
 }
 
 // --- New task: monitor stack usage ---
