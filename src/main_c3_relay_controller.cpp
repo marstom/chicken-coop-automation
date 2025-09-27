@@ -58,7 +58,6 @@ WiFiClient net;
 PubSubClient client(net);
 
 // telnet for print messages via wifi minitor
-
 // WiFiServer telnetServer(23);
 // WiFiClient telnetClient;
 
@@ -71,7 +70,6 @@ TaskHandle_t hRelayTask = NULL;
 
 /// make mqtt thread safe
 
-// QueueHandle_t
 struct RelayCommand
 {
     bool on;
@@ -271,7 +269,7 @@ void printHeap()
 {
     multi_heap_info_t info;
     heap_caps_get_info(&info, MALLOC_CAP_8BIT);
-    Serial.printf("Free: %u, Min free: %u, Largest free block: %u\n",
+    logMessage("Free: %u, Min free: %u, Largest free block: %u\n",
                   info.total_free_bytes,
                   info.minimum_free_bytes,
                   info.largest_free_block);
