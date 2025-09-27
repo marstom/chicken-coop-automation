@@ -1,8 +1,6 @@
 
 #include <stdarg.h>
 #include <Arduino.h>
-// #include <WiFi.h>
-// #include <FreeRTOS.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_task_wdt.h"
@@ -14,15 +12,17 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
+// heap monitoring
 #include "esp_heap_caps.h"
 
 // Wireless code update and monitoring! Cool thing!
 #include <ArduinoOTA.h>
 #include <WiFiUdp.h>
-// #include <WebSerial.h>
 
+// my libs
 #include "wifi_conn.h"
-// #include "c3utils.h"
+#include "mqtt_comm.h"
+#include "debug_tools.h"
 
 // Constants
 
@@ -71,47 +71,24 @@ TaskHandle_t hRelayTask = NULL;
 
 /// make mqtt thread safe
 
-QueueHandle_t mqttQueue;
-QueueHandle_t relayQueue;
-
-struct RelayCommand {
-  bool on;
-};
-
-struct MqttMessage
+// QueueHandle_t
+struct RelayCommand
 {
-    char topic[32];
-    char payload[64];
-
-    void setContent(const char *t, const char *msg)
-    {
-        strncpy(topic, t, sizeof(topic));
-        topic[sizeof(topic) - 1] = '\0';
-        strncpy(payload, msg, sizeof(payload));
-        payload[sizeof(payload) - 1] = '\0';
-    }
-
-    void sendToQueue(uint32_t timeout_ms = 10)
-    {
-        if (!mqttQueue) return; // guard
-        xQueueSend(mqttQueue, this, portMAX_DELAY);
-    }
+    bool on;
 };
-
 // put function declarations here:
 // void taskReceiveRelayCommand(void *pvParameters);
 void mycallback(char *topic, byte *message, unsigned int length);
 void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the messages!
 void taskReadBME280(void *pvParameters);
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
-void relayActionTask(void *pv);
 void logMessage(const char *fmt, ...);
 void taskRelay(void *pvParameters);
 
 void setup()
 {
     Serial.begin(9600);
-    mqttQueue = xQueueCreate(200, sizeof(MqttMessage));
+    communication::mqttQueue = xQueueCreate(200, sizeof(communication::MqttMessage));
 
     my::connect_to_wifi_with_wait();
     pinMode(D0, OUTPUT); // D0 as output
@@ -128,7 +105,7 @@ void setup()
             // Subscriptions here
             client.subscribe(RELAY_1_SET_TOPIC);
             ////////////
-            MqttMessage msg;
+            communication::MqttMessage msg;
             msg.setContent(STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
             msg.sendToQueue();
         }
@@ -167,8 +144,7 @@ void setup()
     xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task);
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
 
-
-    relayQueue = xQueueCreate(2, sizeof(RelayCommand));
+    communication::relayQueue = xQueueCreate(2, sizeof(RelayCommand));
     xTaskCreate(taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
     logMessage("Tasks created, watchdog armed!");
 }
@@ -187,8 +163,8 @@ void taskMQTT(void *pvParameters)
     {
         client.loop(); // <--- processes incoming MQTT messages
         // only publish msg here, it's thread safe
-        MqttMessage msg;
-        if (xQueueReceive(mqttQueue, &msg, 0))
+        communication::MqttMessage msg;
+        if (xQueueReceive(communication::mqttQueue, &msg, 0))
         {
             client.publish(msg.topic, msg.payload);
         }
@@ -197,47 +173,27 @@ void taskMQTT(void *pvParameters)
     }
 }
 
-// void relayActionTask(void *pv)
-// {
-//     esp_task_wdt_add(NULL);
-//     String *msg = (String *)pv;
-//     // logMessage("Async relay action: %s\n", msg->c_str());
-
-//     if (*msg == "ON")
-//     {
-//         digitalWrite(D0, LOW);
-//         // vTaskDelay(pdMS_TO_TICKS(6000));
-//         for (int i = 0; i < 60; i++)
-//         {
-//             vTaskDelay(pdMS_TO_TICKS(100));
-//             esp_task_wdt_reset();
-//         }
-//     }
-//     digitalWrite(D0, HIGH);
-//     // esp_task_wdt_reset();
-//     vTaskDelay(pdMS_TO_TICKS(100));
-//     delete msg;        // free heap
-//     hRelayTask = NULL; // release handler
-//     vTaskDelete(NULL); // destroy task after finish
-// }
-
-
-
-void taskRelay(void *pv) {
-//   esp_task_wdt_add(NULL);
-  RelayCommand cmd;
-  for (;;) {
-    if (xQueueReceive(relayQueue, &cmd, portMAX_DELAY)) {
-      if (cmd.on) {
-        digitalWrite(D0, LOW);
-        vTaskDelay(pdMS_TO_TICKS(6000));
-        digitalWrite(D0, HIGH);
-      } else {
-        digitalWrite(D0, HIGH);
-      }
+void taskRelay(void *pv)
+{
+    //   esp_task_wdt_add(NULL);
+    RelayCommand cmd;
+    for (;;)
+    {
+        if (xQueueReceive(communication::relayQueue, &cmd, portMAX_DELAY))
+        {
+            if (cmd.on)
+            {
+                digitalWrite(D0, LOW);
+                vTaskDelay(pdMS_TO_TICKS(6000));
+                digitalWrite(D0, HIGH);
+            }
+            else
+            {
+                digitalWrite(D0, HIGH);
+            }
+        }
+        // esp_task_wdt_reset();
     }
-    // esp_task_wdt_reset();
-  }
 }
 
 // the mqtt callback:
@@ -251,7 +207,7 @@ void mycallback(char *topic, byte *message, unsigned int length)
 
     RelayCommand cmd;
     cmd.on = (msgTemp == "ON");
-    xQueueSend(relayQueue, &cmd, 0); // queue is thread safe
+    xQueueSend(communication::relayQueue, &cmd, 0); // queue is thread safe
 }
 
 void taskReadBME280(void *pvParameters)
@@ -260,7 +216,7 @@ void taskReadBME280(void *pvParameters)
 
     char buf[16];
     Wire.begin(D4, D5); // 6 7
-    MqttMessage msg;
+    communication::MqttMessage msg;
 
     if (!bme.begin(0x76, &Wire))
     {
@@ -302,16 +258,17 @@ void logMessage(const char *fmt, ...)
     va_end(args);
 
     /// TODO add variadic funciont *fmt , .....
-    Serial.println(buf);              // local USB log
+    Serial.println(buf); // local USB log
 
-    MqttMessage msg;
+    communication::MqttMessage msg;
     msg.setContent("log/mydebug", buf);
     msg.sendToQueue();
 }
 
 // --- New task: monitor stack usage ---
 // debug monitoring
-void printHeap() {
+void printHeap()
+{
     multi_heap_info_t info;
     heap_caps_get_info(&info, MALLOC_CAP_8BIT);
     Serial.printf("Free: %u, Min free: %u, Largest free block: %u\n",
@@ -323,28 +280,12 @@ void taskStackMonitor(void *pvParameters)
 {
     for (;;)
     {
-        if (hMQTTTask)
-        {
-            logMessage("MQTTTask stack free: %u words (%u bytes)\n",
-                       uxTaskGetStackHighWaterMark(hMQTTTask),
-                       uxTaskGetStackHighWaterMark(hMQTTTask) * 4);
-        }
-        if (hBME280Task)
-        {
-            logMessage("BME280Task stack free: %u words (%u bytes)\n",
-                       uxTaskGetStackHighWaterMark(hBME280Task),
-                       uxTaskGetStackHighWaterMark(hBME280Task) * 4);
-        }
-        if (hRelayTask)
-        {
-            logMessage("HRelayTask stack free: %u words (%u bytes)\n",
-                       uxTaskGetStackHighWaterMark(hRelayTask),
-                       uxTaskGetStackHighWaterMark(hRelayTask) * 4);
-        }
 
-        printHeap();
+        debug_tools::printStackInfo("MQTTTask", hMQTTTask);
+        debug_tools::printStackInfo("BME280Task", hBME280Task);
+        debug_tools::printStackInfo("RelayTask", hRelayTask);
+
+        printHeap(); // DEBUG memory leaks
         vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
     }
 }
-
-
