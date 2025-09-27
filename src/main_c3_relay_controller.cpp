@@ -14,6 +14,8 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
+#include "esp_heap_caps.h"
+
 // Wireless code update and monitoring! Cool thing!
 #include <ArduinoOTA.h>
 #include <WiFiUdp.h>
@@ -83,7 +85,6 @@ struct MqttMessage
 
     void setContent(const char *t, const char *msg)
     {
-
         strncpy(topic, t, sizeof(topic));
         topic[sizeof(topic) - 1] = '\0';
         strncpy(payload, msg, sizeof(payload));
@@ -162,13 +163,13 @@ void setup()
     ArduinoOTA.begin();
 
     // xTaskCreatePinnedToCore(taskReceiveRelayCommand, "taskReceiveRelayCommand", 4096 * 4, NULL, 1, &hRelayTask, 0);
-    xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 1, NULL, 1, &hMQTTTask, 0);
-    xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 2, NULL, 1, &hBME280Task);
+    xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
+    xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task);
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
 
 
     relayQueue = xQueueCreate(2, sizeof(RelayCommand));
-    xTaskCreate(taskRelay, "RelayTask", 4096, NULL, 1, &hRelayTask);
+    xTaskCreate(taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
     logMessage("Tasks created, watchdog armed!");
 }
 
@@ -223,7 +224,7 @@ void taskMQTT(void *pvParameters)
 
 
 void taskRelay(void *pv) {
-  esp_task_wdt_add(NULL);
+//   esp_task_wdt_add(NULL);
   RelayCommand cmd;
   for (;;) {
     if (xQueueReceive(relayQueue, &cmd, portMAX_DELAY)) {
@@ -235,15 +236,13 @@ void taskRelay(void *pv) {
         digitalWrite(D0, HIGH);
       }
     }
-    esp_task_wdt_reset();
+    // esp_task_wdt_reset();
   }
 }
 
 // the mqtt callback:
 void mycallback(char *topic, byte *message, unsigned int length)
 {
-
-
     String msgTemp = "";
     for (unsigned int i = 0; i < length; i++)
     {
@@ -252,25 +251,7 @@ void mycallback(char *topic, byte *message, unsigned int length)
 
     RelayCommand cmd;
     cmd.on = (msgTemp == "ON");
-    xQueueSend(relayQueue, &cmd, 0);
-
-    // logMessage("Message arrived on topic: %s", topic);
-    // logMessage("Message is: %s", message);
-    // for (unsigned int i = 0; i < length; i++)
-    // {
-    //     *msg += (char)message[i];
-    // }
-    // // logMessage("Formatted: %s", msg);
-
-    // if (hRelayTask == NULL)
-    // {
-    //     xTaskCreate(relayActionTask, "RelayAction", 4096, msg, 1, &hRelayTask);
-    // }
-    // else
-    // {
-    //     logMessage("Relay task already exists, skipping creation");
-    //     delete msg;
-    // }
+    xQueueSend(relayQueue, &cmd, 0); // queue is thread safe
 }
 
 void taskReadBME280(void *pvParameters)
@@ -330,6 +311,14 @@ void logMessage(const char *fmt, ...)
 
 // --- New task: monitor stack usage ---
 // debug monitoring
+void printHeap() {
+    multi_heap_info_t info;
+    heap_caps_get_info(&info, MALLOC_CAP_8BIT);
+    Serial.printf("Free: %u, Min free: %u, Largest free block: %u\n",
+                  info.total_free_bytes,
+                  info.minimum_free_bytes,
+                  info.largest_free_block);
+}
 void taskStackMonitor(void *pvParameters)
 {
     for (;;)
@@ -346,16 +335,16 @@ void taskStackMonitor(void *pvParameters)
                        uxTaskGetStackHighWaterMark(hBME280Task),
                        uxTaskGetStackHighWaterMark(hBME280Task) * 4);
         }
-        vTaskDelay(pdMS_TO_TICKS(10000)); // print every 10s
+        if (hRelayTask)
+        {
+            logMessage("HRelayTask stack free: %u words (%u bytes)\n",
+                       uxTaskGetStackHighWaterMark(hRelayTask),
+                       uxTaskGetStackHighWaterMark(hRelayTask) * 4);
+        }
+
+        printHeap();
+        vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
     }
 }
 
-/*
-Results with print serial
-RelayTask stack free: 16180 words (64720 bytes)
-MQTTTask stack free: 15476 words (61904 bytes)
-BME280Task stack free: 14576 words (58304 bytes)
 
-MQTTTask stack free: 15476 words (61904 bytes)
-BME280Task stack free: 14576 words (58304 bytes)
-*/
