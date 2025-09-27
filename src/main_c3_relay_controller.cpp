@@ -57,7 +57,6 @@ PubSubClient client(net);
 
 // telnet for print messages via wifi minitor
 
-
 // WiFiServer telnetServer(23);
 // WiFiClient telnetClient;
 
@@ -67,6 +66,32 @@ TaskHandle_t hMQTTTask = NULL;
 TaskHandle_t hBME280Task = NULL;
 TaskHandle_t hStackMonTask = NULL;
 TaskHandle_t hRelayTask = NULL;
+
+/// make mqtt thread safe
+
+QueueHandle_t mqttQueue;
+
+struct MqttMessage
+{
+    char topic[32];
+    char payload[64];
+
+    void setContent(const char *t, const char *msg)
+    {
+
+        strncpy(topic, t, sizeof(topic));
+        topic[sizeof(topic) - 1] = '\0';
+        strncpy(payload, msg, sizeof(payload));
+        payload[sizeof(payload) - 1] = '\0';
+    }
+
+    void sendToQueue(uint32_t timeout_ms = 10)
+    {
+        if (!mqttQueue) return; // guard
+        // if (xQueueSend(mqttQueue, this, pdMS_TO_TICKS(timeout_ms)) != pdTRUE) {
+        xQueueSend(mqttQueue, this, portMAX_DELAY);
+    }
+};
 
 // put function declarations here:
 // void taskReceiveRelayCommand(void *pvParameters);
@@ -80,6 +105,8 @@ void logMessage(const char *fmt, ...);
 void setup()
 {
     Serial.begin(9600);
+    mqttQueue = xQueueCreate(20, sizeof(MqttMessage));
+
     my::connect_to_wifi_with_wait();
     pinMode(D0, OUTPUT); // D0 as output
     digitalWrite(D0, HIGH);
@@ -95,7 +122,9 @@ void setup()
             // Subscriptions here
             client.subscribe(RELAY_1_SET_TOPIC);
             ////////////
-            client.publish(STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
+            MqttMessage msg;
+            msg.setContent(STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
+            msg.sendToQueue();
         }
         else
         {
@@ -121,9 +150,9 @@ void setup()
         .onEnd([]()
                { logMessage("\nOTA update end"); })
         .onProgress([](unsigned int progress, unsigned int total)
-                    { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); })
+                    { logMessage("Progress: %u%%\r", (progress / (total / 100))); })
         .onError([](ota_error_t error)
-                 { Serial.printf("Error[%u]: ", error); });
+                 { logMessage("Error[%u]: ", error); });
 
     ArduinoOTA.begin();
 
@@ -147,6 +176,12 @@ void taskMQTT(void *pvParameters)
     for (;;)
     {
         client.loop(); // <--- processes incoming MQTT messages
+        // only publish msg here, it's thread safe
+        MqttMessage msg;
+        if (xQueueReceive(mqttQueue, &msg, 0))
+        {
+            client.publish(msg.topic, msg.payload);
+        }
         esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
@@ -154,9 +189,9 @@ void taskMQTT(void *pvParameters)
 
 void relayActionTask(void *pv)
 {
-    // esp_task_wdt_add(NULL);
+    esp_task_wdt_add(NULL);
     String *msg = (String *)pv;
-    Serial.printf("Async relay action: %s\n", msg->c_str());
+    logMessage("Async relay action: %s\n", msg->c_str());
 
     if (*msg == "ON")
     {
@@ -172,6 +207,7 @@ void relayActionTask(void *pv)
     // esp_task_wdt_reset();
     vTaskDelay(pdMS_TO_TICKS(100));
     delete msg;        // free heap
+    hRelayTask = NULL; // release handler
     vTaskDelete(NULL); // destroy task after finish
 }
 
@@ -192,6 +228,7 @@ void mycallback(char *topic, byte *message, unsigned int length)
     {
         logMessage("Relay task already exists, skipping creation");
     }
+    delete msg;
 }
 
 void taskReadBME280(void *pvParameters)
@@ -200,6 +237,7 @@ void taskReadBME280(void *pvParameters)
 
     char buf[16];
     Wire.begin(D4, D5); // 6 7
+    MqttMessage msg;
 
     if (!bme.begin(0x76, &Wire))
     {
@@ -211,24 +249,26 @@ void taskReadBME280(void *pvParameters)
     }
     for (;;)
     {
-        // telnetServer.print("BME280 temperature: ");
         snprintf(buf, sizeof(buf), "%.2f", bme.readTemperature());
-        client.publish(BME_TEMPERATURE_TOPIC, buf, true);
+        msg.setContent(BME_TEMPERATURE_TOPIC, buf);
+        msg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readPressure());
-        client.publish(BME_PRESSURE_TOPIC, buf);
+        msg.setContent(BME_PRESSURE_TOPIC, buf);
+        msg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readAltitude(SEALEVELPRESSURE_HPA));
-        client.publish(BME_ALTITUDE_TOPIC, buf);
+        msg.setContent(BME_ALTITUDE_TOPIC, buf);
+        msg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readHumidity());
-        client.publish(BME_HUMIDITY_TOPIC, buf); // add ,true to retain
+        msg.setContent(BME_HUMIDITY_TOPIC, buf);
+        msg.sendToQueue();
 
         esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
-
 
 void logMessage(const char *fmt, ...)
 {
@@ -237,10 +277,13 @@ void logMessage(const char *fmt, ...)
     va_start(args, fmt);
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
-    
+
     /// TODO add variadic funciont *fmt , .....
-    Serial.println(buf);                   // local USB log
-    client.publish("log/debug", buf);      // remote log via MQTT
+    Serial.println(buf);              // local USB log
+
+    MqttMessage msg;
+    msg.setContent("log/debug", buf);
+    msg.sendToQueue(0);
 }
 
 // --- New task: monitor stack usage ---
@@ -252,14 +295,14 @@ void taskStackMonitor(void *pvParameters)
         if (hMQTTTask)
         {
             logMessage("MQTTTask stack free: %u words (%u bytes)\n",
-                          uxTaskGetStackHighWaterMark(hMQTTTask),
-                          uxTaskGetStackHighWaterMark(hMQTTTask) * 4);
+                       uxTaskGetStackHighWaterMark(hMQTTTask),
+                       uxTaskGetStackHighWaterMark(hMQTTTask) * 4);
         }
         if (hBME280Task)
         {
             logMessage("BME280Task stack free: %u words (%u bytes)\n",
-                          uxTaskGetStackHighWaterMark(hBME280Task),
-                          uxTaskGetStackHighWaterMark(hBME280Task) * 4);
+                       uxTaskGetStackHighWaterMark(hBME280Task),
+                       uxTaskGetStackHighWaterMark(hBME280Task) * 4);
         }
         vTaskDelay(pdMS_TO_TICKS(10000)); // print every 10s
     }
