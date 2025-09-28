@@ -8,10 +8,24 @@ namespace communication
     QueueHandle_t mqttQueue;
     QueueHandle_t relayQueue;
 
+    struct RelayCommand
+    {
+        bool on;
+    };
+
+
     struct MqttMessage
     {
         char topic[32];
         char payload[64];
+
+        MqttMessage() {
+        }
+
+
+        ~MqttMessage() {
+
+        }
 
         void setContent(const char *t, const char *msg)
         {
@@ -28,4 +42,10 @@ namespace communication
             xQueueSend(mqttQueue, this, portMAX_DELAY);
         }
     };
+
+    void initQueue(){
+            mqttQueue = xQueueCreate(200, sizeof(MqttMessage));
+            relayQueue = xQueueCreate(2, sizeof(RelayCommand));
+
+    }
 }
