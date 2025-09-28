@@ -41,10 +41,14 @@
 #define BME_MOSI D10
 #define BME_CS D7
 
+// TODO add prefixes, to distinguish this device
+// #define PREFIX "basement/"
+// #define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
 #define BME_TEMPERATURE_TOPIC "bme280/temperature"
 #define BME_PRESSURE_TOPIC "bme280/pressure"
 #define BME_HUMIDITY_TOPIC "bme280/humidity"
 #define BME_ALTITUDE_TOPIC "bme280/altitude"
+#define MQTT_LOG_TOPIC "log/mydebug"
 
 #define I2C_SDA D4
 #define I2C_SCL D5
@@ -70,6 +74,7 @@ TaskHandle_t hRelayTask = NULL;
 
 /// make mqtt thread safe
 
+// TODO move to my library
 struct RelayCommand
 {
     bool on;
@@ -86,6 +91,7 @@ void taskRelay(void *pvParameters);
 void setup()
 {
     Serial.begin(9600);
+    // TODO initialize in lib source
     communication::mqttQueue = xQueueCreate(200, sizeof(communication::MqttMessage));
 
     my::connect_to_wifi_with_wait();
@@ -142,6 +148,7 @@ void setup()
     xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task);
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
 
+    /// TODO initialize in source
     communication::relayQueue = xQueueCreate(2, sizeof(RelayCommand));
     xTaskCreate(taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
     logMessage("Tasks created, watchdog armed!");
@@ -255,11 +262,10 @@ void logMessage(const char *fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
 
-    /// TODO add variadic funciont *fmt , .....
     Serial.println(buf); // local USB log
 
     communication::MqttMessage msg;
-    msg.setContent("log/mydebug", buf);
+    msg.setContent(MQTT_LOG_TOPIC, buf);
     msg.sendToQueue();
 }
 
