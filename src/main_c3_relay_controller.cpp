@@ -40,7 +40,7 @@
 #define BME_CS D7
 
 // MQTT stuff
-#define THINGNAME "esp32-c3-basement"
+#define THINGNAME "esp32-c3-basement-fhs232y3a43"
 #define PREFIX "basement/"
 #define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
 #define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
@@ -191,7 +191,7 @@ void taskRelay(void *pv)
                 digitalWrite(D0, HIGH);
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(100));
+        // vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 

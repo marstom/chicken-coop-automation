@@ -28,7 +28,7 @@ unsigned long delayTime;
 #define LED_PIN 48
 
 // MQTT stuff
-#define THINGNAME "esp32"
+#define THINGNAME "esp32-c3-faw9u8u"
 #define TEMPERATURE_TOPIC "temperature/read"
 #define BME_280_TEMPERATURE_TOPIC "bme280/temperature/read"
 #define BME_280_PRESSURE_TOPIC "bme280/pressure/read"
