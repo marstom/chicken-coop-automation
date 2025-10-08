@@ -17,9 +17,21 @@
 ### Relay
 Check the photo for more details
 
-### ohter
+Connect to the board:
+RYVcc-Vcc jumper
+GND - board / usb GND
+VCC - 5V VCC V-usb
+IN1 - D0
 
-...
+### bme280
+vcc - 3.3v
+SDA - D4
+SCL - D5
+
+### Amonia sensor
+
+WIP
+
 
 
 

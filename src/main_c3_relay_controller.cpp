@@ -26,12 +26,15 @@
 
 
 // Hardware feature toggle, comment out hardware which you don't need
-#define DEVICE_BME_280_ENABLED
-#define DEVICE_RELAY_ENABLED
+// #define DEVICE_BME_280_ENABLED // enable temp & humidity & altitude & pressure sensor
+#define DEVICE_RELAY_ENABLED // enable relay controll
 
 // Addressable RGB LED, driven by GPIO48.
 #define LED_PIN 48
 #define WDT_TIMEOUT 10 // 10 seconds
+
+
+#define RELAY_PIN D0
 
 // BME temperature and humidity sensor, connected to i2c bus in current setup
 #define BME_SCK D8
@@ -86,8 +89,8 @@ void setup()
     my::connect_to_wifi_with_wait();
     debug_tools::logPrefix  = PREFIX;
 
-    pinMode(D0, OUTPUT); // D0 as output
-    digitalWrite(D0, HIGH);
+    pinMode(RELAY_PIN, OUTPUT); // RELAY_PIN as output
+    digitalWrite(RELAY_PIN, HIGH);
 
     client.setServer(host, 1883); // rpi server
     client.setCallback(mycallback);
@@ -182,13 +185,13 @@ void taskRelay(void *pv)
         {
             if (cmd.on)
             {
-                digitalWrite(D0, LOW);
+                digitalWrite(RELAY_PIN, LOW);
                 vTaskDelay(pdMS_TO_TICKS(6000));
-                digitalWrite(D0, HIGH);
+                digitalWrite(RELAY_PIN, HIGH);
             }
             else
             {
-                digitalWrite(D0, HIGH);
+                digitalWrite(RELAY_PIN, HIGH);
             }
         }
         // vTaskDelay(pdMS_TO_TICKS(100));
