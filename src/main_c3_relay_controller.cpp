@@ -24,7 +24,6 @@
 #include "mqtt_comm.h"
 #include "debug_tools.h"
 
-
 // Hardware feature toggle, comment out hardware which you don't need
 // #define DEVICE_BME_280_ENABLED // enable temp & humidity & altitude & pressure sensor
 #define DEVICE_RELAY_ENABLED // enable relay controll
@@ -32,7 +31,6 @@
 // Addressable RGB LED, driven by GPIO48.
 #define LED_PIN 48
 #define WDT_TIMEOUT 10 // 10 seconds
-
 
 #define RELAY_PIN D0
 
@@ -82,12 +80,13 @@ void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the m
 void taskReadBME280(void *pvParameters);
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
 void taskRelay(void *pvParameters);
+void tcpServerTask(void *pvParameters); // direct connection
 
 void setup()
 {
     Serial.begin(9600);
     my::connect_to_wifi_with_wait();
-    debug_tools::logPrefix  = PREFIX;
+    debug_tools::logPrefix = PREFIX;
 
     pinMode(RELAY_PIN, OUTPUT); // RELAY_PIN as output
     digitalWrite(RELAY_PIN, HIGH);
@@ -118,6 +117,7 @@ void setup()
     // telnetServer.begin();
     // telnetServer.setNoDelay(true);
     ////
+
     debug_tools::logMessage("Initialize watchdog");
     esp_task_wdt_init(WDT_TIMEOUT, true);
 
@@ -141,13 +141,15 @@ void setup()
     communication::initQueue();
     // main mqtt task
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
-    #ifdef DEVICE_BME_280_ENABLED
+#ifdef DEVICE_BME_280_ENABLED
     xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task);
-    #endif
-    // hardware sensors tasks
-    #ifdef DEVICE_RELAY_ENABLED
+#endif
+// hardware sensors tasks
+#ifdef DEVICE_RELAY_ENABLED
     xTaskCreate(taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
-    #endif
+#endif
+    xTaskCreate(tcpServerTask, "tcpServerTask", 4096, NULL, 1, NULL);
+
     // monitoring tasks
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
     debug_tools::logMessage("Tasks created, watchdog armed!");
@@ -250,6 +252,31 @@ void taskReadBME280(void *pvParameters)
     }
 }
 
+// direct tcp
+void tcpServerTask(void *pvParameters)
+{
+    WiFiServer server(80); // http
+    server.begin();
+
+    for (;;)
+    {
+        WiFiClient client = server.available();
+        if (client)
+        {
+            String req = client.readStringUntil('\n');
+            Serial.println(req);
+
+            // on receive GET requeset
+            digitalWrite(RELAY_PIN, LOW);
+            vTaskDelay(pdMS_TO_TICKS(6000));
+            digitalWrite(RELAY_PIN, HIGH);
+            client.println("OK");
+            client.stop();
+        }
+        vTaskDelay(pdMS_TO_TICKS(250)); // yield
+    }
+}
+
 // --- New task: device monitoring, for troubleshooting ---
 void taskStackMonitor(void *pvParameters)
 {
@@ -259,7 +286,7 @@ void taskStackMonitor(void *pvParameters)
         debug_tools::printStackInfo("MQTTTask", hMQTTTask);
         debug_tools::printStackInfo("BME280Task", hBME280Task);
         debug_tools::printStackInfo("RelayTask", hRelayTask);
-        debug_tools::printHeap(); // DEBUG memory leaks
+        debug_tools::printHeap();        // DEBUG memory leaks
         vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
     }
 }
