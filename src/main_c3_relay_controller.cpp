@@ -30,7 +30,7 @@
 
 // Addressable RGB LED, driven by GPIO48.
 #define LED_PIN 48
-#define WDT_TIMEOUT 10 // 10 seconds
+#define WDT_TIMEOUT 30
 
 #define RELAY_PIN D0
 
@@ -263,15 +263,21 @@ void tcpServerTask(void *pvParameters)
         WiFiClient client = server.available();
         if (client)
         {
+            esp_task_wdt_add(NULL);
             String req = client.readStringUntil('\n');
             Serial.println(req);
 
             // on receive GET requeset
             digitalWrite(RELAY_PIN, LOW);
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-Type: text/plain");
+            client.println("Connection: close");
+            client.println("");
+            client.println("Open, closing in 6s...");
+            client.stop();
             vTaskDelay(pdMS_TO_TICKS(6000));
             digitalWrite(RELAY_PIN, HIGH);
-            client.println("OK");
-            client.stop();
+            esp_task_wdt_reset();
         }
         vTaskDelay(pdMS_TO_TICKS(250)); // yield
     }
