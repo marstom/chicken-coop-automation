@@ -19,6 +19,9 @@
 #include <ArduinoOTA.h>
 #include <WiFiUdp.h>
 
+// BLE support
+#include <ArduinoBLE.h>
+
 // my libs
 #include "wifi_conn.h"
 #include "mqtt_comm.h"
@@ -27,6 +30,8 @@
 // Hardware feature toggle, comment out hardware which you don't need
 // #define DEVICE_BME_280_ENABLED // enable temp & humidity & altitude & pressure sensor
 #define DEVICE_RELAY_ENABLED // enable relay controll
+#define BLE_ENABLED          // enable ble communication
+// #define ENABLE_MONITORING
 
 // Addressable RGB LED, driven by GPIO48.
 #define LED_PIN 48
@@ -67,6 +72,23 @@ PubSubClient client(net);
 // WiFiServer telnetServer(23);
 // WiFiClient telnetClient;
 
+// ------------- BLE support -------------
+// UUIDs
+const char *deviceServiceUuid = "19b10000-e8f2-537e-4f6c-d104768a1214";
+const char *deviceServiceRequestCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1214";
+const char *deviceServiceResponseCharacteristicUuid = "19b10002-e8f2-537e-4f6c-d104768a1214";
+
+// GATT objects
+BLEService deviceService(deviceServiceUuid);
+
+// phone writes
+BLEStringCharacteristic deviceRequestCharacteristic(deviceServiceRequestCharacteristicUuid, BLEWrite, 32);
+// phone reads / notify phone
+BLEStringCharacteristic deviceResponseCharacteristic(deviceServiceResponseCharacteristicUuid, BLERead | BLENotify, 32);
+
+BLEDescriptor reqName("2901", "Phone → ESP request");
+BLEDescriptor respName("2901", "ESP → Phone response");
+
 // --- Task handles (needed for stack monitoring) ---
 TaskHandle_t hMQTTTask = NULL;
 TaskHandle_t hBME280Task = NULL;
@@ -74,7 +96,6 @@ TaskHandle_t hStackMonTask = NULL;
 TaskHandle_t hRelayTask = NULL;
 
 /// make mqtt thread safe
-
 void mycallback(char *topic, byte *message, unsigned int length);
 void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the messages!
 void taskReadBME280(void *pvParameters);
@@ -82,9 +103,14 @@ void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usa
 void taskRelay(void *pvParameters);
 void tcpServerTask(void *pvParameters); // direct connection
 
+void taskBLE(void *pvParameters);
+
 void setup()
 {
     Serial.begin(9600);
+    while (!Serial && millis() < 3000)
+    {
+    } // wait a moment for usb
     my::connect_to_wifi_with_wait();
     debug_tools::logPrefix = PREFIX;
 
@@ -147,6 +173,35 @@ void setup()
 // hardware sensors tasks
 #ifdef DEVICE_RELAY_ENABLED
     xTaskCreate(taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
+#endif
+#ifdef BLE_ENABLED
+    // 1) MUST start BLE before using any other BLE APIs
+    if (!BLE.begin())
+    {
+        Serial.println("BLE.begin() failed");
+        for (;;)
+            delay(1000);
+    }
+
+    BLE.setLocalName("tomeksEspLocalName");
+    BLE.setDeviceName("tomeksEspDeviceName");
+
+    // build GATT
+    deviceService.addCharacteristic(deviceRequestCharacteristic);
+    deviceService.addCharacteristic(deviceResponseCharacteristic);
+
+    // add descriptors
+    deviceRequestCharacteristic.addDescriptor(reqName);
+    deviceResponseCharacteristic.addDescriptor(respName);
+
+    deviceResponseCharacteristic.setValue(""); // initial value
+
+    BLE.setAdvertisedService(deviceService);
+    BLE.addService(deviceService);
+    BLE.advertise();
+
+    Serial.println("BLE initialized, advertising...");
+    xTaskCreate(taskBLE, "taskBLE", 4096, NULL, 1, NULL);
 #endif
     xTaskCreate(tcpServerTask, "tcpServerTask", 4096, NULL, 1, NULL);
 
@@ -283,16 +338,63 @@ void tcpServerTask(void *pvParameters)
     }
 }
 
+void taskBLE(void *pvParameters)
+{
+    Serial.println("Starting BLE work!");
+    while (1)
+    {
+        BLEDevice central = BLE.central();
+        if (central)
+        {
+            // poll BLE radio events and handle them
+            while (central.connected())
+            {
+                BLE.poll();
+
+                if (deviceRequestCharacteristic.written())
+                {
+                    String receivedData = deviceRequestCharacteristic.value();
+                    String pass = "paulina";
+                    Serial.println("RCV data:" + receivedData);
+                    Serial.println(receivedData == pass);
+                    if (receivedData == pass)
+                    {
+                        Serial.println("OPEN BLE");
+                        String resp = "Status: The door has been opened!";
+                        deviceResponseCharacteristic.setValue(resp);
+                        digitalWrite(RELAY_PIN, LOW);
+                        vTaskDelay(pdMS_TO_TICKS(6000));
+                        digitalWrite(RELAY_PIN, HIGH);
+                    }
+                    else
+                    {
+                        Serial.println("DENY BLE");
+                        // Send notification back
+                        String resp = "Status: acces denied...";
+                        deviceResponseCharacteristic.setValue(resp);
+                        digitalWrite(RELAY_PIN, HIGH);
+                    }
+                }
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+
+            Serial.println("Disconnected");
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
 // --- New task: device monitoring, for troubleshooting ---
 void taskStackMonitor(void *pvParameters)
 {
     for (;;)
     {
-
+#ifdef ENABLE_MONITORING
         debug_tools::printStackInfo("MQTTTask", hMQTTTask);
         debug_tools::printStackInfo("BME280Task", hBME280Task);
         debug_tools::printStackInfo("RelayTask", hRelayTask);
-        debug_tools::printHeap();        // DEBUG memory leaks
+        debug_tools::printHeap(); // DEBUG memory leaks
+#endif
         vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
     }
 }
