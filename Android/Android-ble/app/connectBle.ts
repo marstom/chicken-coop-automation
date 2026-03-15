@@ -16,11 +16,11 @@ export const connectBle = () => {
     const CHAR_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
 
     const readValue = async (device: Device) => {
-    const characteristic = await device.readCharacteristicForService(
-        SERVICE_UUID,
-        CHAR_UUID
-    );
-    console.log("Value:", characteristic.value); // base64
+    // const characteristic = await device.readCharacteristicForService(
+    //     SERVICE_UUID,
+    //     CHAR_UUID
+    // );
+    // console.log("Value:", characteristic.value); // base64
     };
 
     const writeValue = async (device: Device) => {
