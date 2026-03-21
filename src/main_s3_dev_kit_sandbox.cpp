@@ -3,6 +3,7 @@
 // #include <FreeRTOS.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <WebServer.h>
 
 // Local
 #include "wifi_conn.h"
@@ -11,19 +12,27 @@
 
 // WiFiClient net;
 
-
+WebServer server(80);
 void taskHello(void *pvParameters);
 
 void setup()
 {
   Serial.begin(9600);
-
   // setup WIFI
-  my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS);
-  xTaskCreate(taskHello, "taskHello", 4096, NULL, 1, NULL);
+  // http://tomroom/  < - it's working with my router!
+  my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "tomroom");
+
+  server.on("/", []() {
+    server.send(200, "text/plain", "Hello from ESP32");
+  });
+  server.begin();
+
+  // xTaskCreate(taskHello, "taskHello", 4096, NULL, 1, NULL);
 }
 
-void loop() {}
+void loop() {
+    server.handleClient();
+}
 
 
 void taskHello(void *pvParameters)
