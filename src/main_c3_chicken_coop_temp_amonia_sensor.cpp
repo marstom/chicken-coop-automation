@@ -1,7 +1,7 @@
 
 /*
 
-This is door lock in my basement. BLE controlled plus WiFi controlled
+This is chicken coop monitor.
 */
 
 #include <stdarg.h>
@@ -11,7 +11,6 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include "esp_task_wdt.h"
 
 #include <HTTPClient.h>
-#include <PubSubClient.h>
 
 // for BME
 #include <Adafruit_Sensor.h>
@@ -28,15 +27,13 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include <ArduinoBLE.h>
 
 // my libs
+#include "secrets.h"
 #include "wifi_conn.h"
 #include "mqtt_comm.h"
 #include "debug_tools.h"
-#include "secrets.h"
 
 // Hardware feature toggle, comment out hardware which you don't need
-// #define DEVICE_BME_280_ENABLED // enable temp & humidity & altitude & pressure sensor
-#define DEVICE_RELAY_ENABLED // enable relay controll
-#define BLE_ENABLED          // enable ble communication
+#define DEVICE_BME_280_ENABLED       // enable bme280 temp/humidity sensor
 // #define ENABLE_MONITORING
 
 // Addressable RGB LED, driven by GPIO48.
@@ -52,8 +49,8 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #define BME_CS D7
 
 // MQTT stuff
-#define THINGNAME "esp32-c3-basement-fhs232y3a43"
-#define PREFIX "basement/"
+#define THINGNAME "esp32-c3-coop-temp-amonia-sensor-k31hfaie"
+#define PREFIX "coop/"
 #define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
 #define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
 #define BME_PRESSURE_TOPIC PREFIX "bme280/pressure"
@@ -71,45 +68,24 @@ Adafruit_BME280 bme; // I2C
 
 // My rasberry pi server name
 const char *host = "raspberrypi.local";
+//TODO change WIFI access point outside !
 WiFiClient net;
+
 PubSubClient client(net);
-
-// telnet for print messages via wifi minitor
-// WiFiServer telnetServer(23);
-// WiFiClient telnetClient;
-
-// ------------- BLE support -------------
-// UUIDs
-const char *deviceServiceUuid = "19b10000-e8f2-537e-4f6c-d104768a1214";
-const char *deviceServiceRequestCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1214";
-const char *deviceServiceResponseCharacteristicUuid = "19b10002-e8f2-537e-4f6c-d104768a1214";
-
-// GATT objects
-BLEService deviceService(deviceServiceUuid);
-
-// phone writes
-BLEStringCharacteristic deviceRequestCharacteristic(deviceServiceRequestCharacteristicUuid, BLEWrite, 32);
-// phone reads / notify phone
-BLEStringCharacteristic deviceResponseCharacteristic(deviceServiceResponseCharacteristicUuid, BLERead | BLENotify, 32);
-
-BLEDescriptor reqName("2901", "Phone → ESP request");
-BLEDescriptor respName("2901", "ESP → Phone response");
 
 // --- Task handles (needed for stack monitoring) ---
 TaskHandle_t hMQTTTask = NULL;
 TaskHandle_t hBME280Task = NULL;
 TaskHandle_t hStackMonTask = NULL;
-TaskHandle_t hRelayTask = NULL;
 
 /// make mqtt thread safe
 void mycallback(char *topic, byte *message, unsigned int length);
 void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the messages!
 void taskReadBME280(void *pvParameters);
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
-void taskRelay(void *pvParameters);
+// void taskRelay(void *pvParameters);
 void tcpServerTask(void *pvParameters); // direct connection
 
-void taskBLE(void *pvParameters);
 
 void setup()
 {
@@ -117,11 +93,8 @@ void setup()
     while (!Serial && millis() < 3000)
     {
     } // wait a moment for usb
-    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS);
+    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS); // TODO later change to garden
     debug_tools::logPrefix = PREFIX;
-
-    pinMode(RELAY_PIN, OUTPUT); // RELAY_PIN as output
-    digitalWrite(RELAY_PIN, HIGH);
 
     client.setServer(host, 1883); // rpi server
     client.setCallback(mycallback);
@@ -145,10 +118,6 @@ void setup()
             delay(2000);
         }
     }
-    /// telnet
-    // telnetServer.begin();
-    // telnetServer.setNoDelay(true);
-    ////
 
     debug_tools::logMessage("Initialize watchdog");
     esp_task_wdt_init(WDT_TIMEOUT, true);
@@ -157,6 +126,7 @@ void setup()
     debug_tools::logMessage("Initialize OTA updates via Wireless");
     debug_tools::logMessage("UPDATE VIA OTA");
     ArduinoOTA.setHostname("esp32c3"); // must match upload_port in platformio.ini
+    // remote code upload
     ArduinoOTA
         .onStart([]()
                  { debug_tools::logMessage("OTA update start"); })
@@ -169,48 +139,10 @@ void setup()
 
     ArduinoOTA.begin();
 
-    // xTaskCreatePinnedToCore(taskReceiveRelayCommand, "taskReceiveRelayCommand", 4096 * 4, NULL, 1, &hRelayTask, 0);
     communication::initQueue();
     // main mqtt task
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
-#ifdef DEVICE_BME_280_ENABLED
     xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task);
-#endif
-// hardware sensors tasks
-#ifdef DEVICE_RELAY_ENABLED
-    xTaskCreate(taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
-#endif
-#ifdef BLE_ENABLED
-    // 1) MUST start BLE before using any other BLE APIs
-    if (!BLE.begin())
-    {
-        Serial.println("BLE.begin() failed");
-        for (;;)
-            delay(1000);
-    }
-
-    BLE.setLocalName("tomeksEspLocalName");
-    BLE.setDeviceName("tomeksEspDeviceName");
-
-    // build GATT
-    deviceService.addCharacteristic(deviceRequestCharacteristic);
-    deviceService.addCharacteristic(deviceResponseCharacteristic);
-
-    // add descriptors
-    deviceRequestCharacteristic.addDescriptor(reqName);
-    deviceResponseCharacteristic.addDescriptor(respName);
-
-    deviceResponseCharacteristic.setValue(""); // initial value
-
-    BLE.setAdvertisedService(deviceService);
-    BLE.addService(deviceService);
-    BLE.advertise();
-
-    Serial.println("BLE initialized, advertising...");
-    xTaskCreate(taskBLE, "taskBLE", 4096, NULL, 1, NULL);
-#endif
-    xTaskCreate(tcpServerTask, "tcpServerTask", 4096, NULL, 1, NULL);
-
     // monitoring tasks
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
     debug_tools::logMessage("Tasks created, watchdog armed!");
@@ -239,27 +171,6 @@ void taskMQTT(void *pvParameters)
     }
 }
 
-void taskRelay(void *pv)
-{
-    communication::RelayCommand cmd;
-    for (;;)
-    {
-        if (xQueueReceive(communication::relayQueue, &cmd, portMAX_DELAY))
-        {
-            if (cmd.on)
-            {
-                digitalWrite(RELAY_PIN, LOW);
-                vTaskDelay(pdMS_TO_TICKS(6000));
-                digitalWrite(RELAY_PIN, HIGH);
-            }
-            else
-            {
-                digitalWrite(RELAY_PIN, HIGH);
-            }
-        }
-        // vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
 
 void mycallback(char *topic, byte *message, unsigned int length)
 {
@@ -274,6 +185,8 @@ void mycallback(char *topic, byte *message, unsigned int length)
     xQueueSend(communication::relayQueue, &cmd, 0); // queue is thread safe
 }
 
+/// @brief Temperature sensor
+/// @param pvParameters 
 void taskReadBME280(void *pvParameters)
 {
     esp_task_wdt_add(NULL);
@@ -313,82 +226,8 @@ void taskReadBME280(void *pvParameters)
     }
 }
 
-// direct tcp
-void tcpServerTask(void *pvParameters)
-{
-    WiFiServer server(80); // http
-    server.begin();
 
-    for (;;)
-    {
-        WiFiClient client = server.available();
-        if (client)
-        {
-            esp_task_wdt_add(NULL);
-            String req = client.readStringUntil('\n');
-            Serial.println(req);
 
-            // on receive GET requeset
-            digitalWrite(RELAY_PIN, LOW);
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-Type: text/plain");
-            client.println("Connection: close");
-            client.println("");
-            client.println("Open, closing in 6s...");
-            client.stop();
-            vTaskDelay(pdMS_TO_TICKS(6000));
-            digitalWrite(RELAY_PIN, HIGH);
-            esp_task_wdt_reset();
-        }
-        vTaskDelay(pdMS_TO_TICKS(250)); // yield
-    }
-}
-
-void taskBLE(void *pvParameters)
-{
-    Serial.println("Starting BLE work!");
-    while (1)
-    {
-        BLEDevice central = BLE.central();
-        if (central)
-        {
-            // poll BLE radio events and handle them
-            while (central.connected())
-            {
-                BLE.poll();
-
-                if (deviceRequestCharacteristic.written())
-                {
-                    String receivedData = deviceRequestCharacteristic.value();
-                    String pass = "paulina";
-                    Serial.println("RCV data:" + receivedData);
-                    Serial.println(receivedData == pass);
-                    if (receivedData == pass)
-                    {
-                        Serial.println("OPEN BLE");
-                        String resp = "Status: The door has been opened!";
-                        deviceResponseCharacteristic.setValue(resp);
-                        digitalWrite(RELAY_PIN, LOW);
-                        vTaskDelay(pdMS_TO_TICKS(6000));
-                        digitalWrite(RELAY_PIN, HIGH);
-                    }
-                    else
-                    {
-                        Serial.println("DENY BLE");
-                        // Send notification back
-                        String resp = "Status: acces denied...";
-                        deviceResponseCharacteristic.setValue(resp);
-                        digitalWrite(RELAY_PIN, HIGH);
-                    }
-                }
-                vTaskDelay(pdMS_TO_TICKS(10));
-            }
-
-            Serial.println("Disconnected");
-        }
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
 
 // --- New task: device monitoring, for troubleshooting ---
 void taskStackMonitor(void *pvParameters)
@@ -398,7 +237,6 @@ void taskStackMonitor(void *pvParameters)
 #ifdef ENABLE_MONITORING
         debug_tools::printStackInfo("MQTTTask", hMQTTTask);
         debug_tools::printStackInfo("BME280Task", hBME280Task);
-        debug_tools::printStackInfo("RelayTask", hRelayTask);
         debug_tools::printHeap(); // DEBUG memory leaks
 #endif
         vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s

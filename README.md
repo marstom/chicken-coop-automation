@@ -28,8 +28,8 @@ Hardware;
 - I2C from bme280
 
 
-
-
-
 # Known bugs & problems
 - Intelhex problem fix: `pip install intelhex` (only on mac?)
+
+
+

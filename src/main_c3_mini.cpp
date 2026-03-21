@@ -8,6 +8,7 @@
 #include <PubSubClient.h>
 
 #include "wifi_conn.h"
+#include "secrets.h"
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
@@ -55,7 +56,7 @@ void setup()
   Serial.begin(9600);
 
   // setup WIFI
-  my::connect_to_wifi_with_wait();
+  my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS);
 
   client.setServer(host, 1883);
   while (!client.connected())
