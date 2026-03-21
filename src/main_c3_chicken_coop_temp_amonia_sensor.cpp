@@ -93,7 +93,7 @@ void setup()
     while (!Serial && millis() < 3000)
     {
     } // wait a moment for usb
-    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS); // TODO later change to garden
+    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "coop-automation"); // TODO later change to garden
     debug_tools::logPrefix = PREFIX;
 
     client.setServer(host, 1883); // rpi server

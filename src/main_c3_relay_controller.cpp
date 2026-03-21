@@ -117,7 +117,7 @@ void setup()
     while (!Serial && millis() < 3000)
     {
     } // wait a moment for usb
-    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS);
+    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "basement");
     debug_tools::logPrefix = PREFIX;
 
     pinMode(RELAY_PIN, OUTPUT); // RELAY_PIN as output
