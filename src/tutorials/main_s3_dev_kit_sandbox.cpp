@@ -23,7 +23,7 @@ void setup()
   my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "tomroom");
 
   server.on("/", []() {
-    server.send(200, "text/plain", "Hello from ESP32");
+    server.send(200, "text/plain", "<p>Hello from ESP32-S3 Dev Kit!</p><p>Go to <a href=\"/hello\">/hello</a> to see the message from FreeRTOS task.</p>");
   });
   server.begin();
 
