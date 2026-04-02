@@ -1,0 +1,6 @@
+#! /bin/zsh
+
+
+touch secret.ini
+
+echo "Copy paste content from docs to secret.ini"

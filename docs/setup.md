@@ -15,6 +15,8 @@ Platformio plugin.
 
 # Network setup
 
+First `touch secret.ini` in project root.
+
 The wifi pass and ssid:
 
 ```ini
@@ -26,6 +28,13 @@ build_flags =
   -DWIFI_SSID=\"T-Mobile-<SSID>\"
   -DWIFI_PASS=\"<PASSWORD>\"
 ``` 
+
+5G networks:
+
+```
+T-Mobile-Tom-5G_EXT
+T-Mobile-Tom-5G
+```
 
 # MQTT setup
 ...
