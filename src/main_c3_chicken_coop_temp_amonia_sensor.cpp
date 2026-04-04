@@ -324,6 +324,10 @@ void simpleWebPage()
     webServer.on("/", handleRootPage);
     webServer.on("/health", []()
                  { webServer.send(200, "application/json", "{\"status\":\"ok\"}"); });
+    webServer.on("/favicon.ico", []()
+                 { webServer.send(200, "image/x-icon", ""); });
+    webServer.onNotFound([]()
+                         { webServer.send(404, "text/plain", "404: Not Found"); });
     webServer.begin();
 }
 
