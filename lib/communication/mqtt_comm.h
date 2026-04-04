@@ -13,7 +13,21 @@ namespace communication
         bool on;
     };
 
-
+    /**
+     * Small POD-style message passed between tasks through `mqttQueue`.
+     *
+     * Purpose:
+     * - lets producer tasks prepare MQTT data without touching `PubSubClient`
+     * - keeps cross-task communication simple by copying fixed-size buffers
+     * - is consumed later by `taskMQTT()`, which publishes `topic` + `payload`
+     *
+     * Notes:
+     * - `topic` is limited to 31 characters plus the null terminator
+     * - `payload` is limited to 63 characters plus the null terminator
+     * - `setContent()` truncates long strings safely
+     * - `sendToQueue()` sends a copy of this struct to the queue, so the caller
+     *   can reuse the same local variable immediately after calling it
+     */
     struct MqttMessage
     {
         char topic[32];
@@ -26,7 +40,7 @@ namespace communication
         ~MqttMessage() {
 
         }
-
+        /// Copy topic and payload into the internal fixed-size buffers.
         void setContent(const char *t, const char *msg)
         {
             strncpy(topic, t, sizeof(topic));
@@ -35,6 +49,8 @@ namespace communication
             payload[sizeof(payload) - 1] = '\0';
         }
 
+        /// Queue this message for the MQTT task to publish later.
+        /// `timeout_ms` is currently unused; this call blocks with `portMAX_DELAY`.
         void sendToQueue(uint32_t timeout_ms = 10)
         {
             if (!mqttQueue)

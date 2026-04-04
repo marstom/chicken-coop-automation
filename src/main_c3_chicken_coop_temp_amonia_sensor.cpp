@@ -27,6 +27,9 @@ This is chicken coop monitor.
 // BLE support
 #include <ArduinoBLE.h>
 
+// mDNS support
+#include <ESPmDNS.h>
+
 // my libs
 #include "secrets.h"
 #include "wifi_conn.h"
@@ -86,6 +89,8 @@ void taskReadBME280(void *pvParameters);
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
 // void taskRelay(void *pvParameters);
 void tcpServerTask(void *pvParameters); // direct connection
+void setupMDNS(const char* hostname);
+
 
 
 void setup()
@@ -95,6 +100,8 @@ void setup()
     {
     } // wait a moment for usb
     my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "coop-automation"); // TODO later change to garden
+    setupMDNS("dom-chicken");
+    Serial.println("Adres to: http://dom-chicken.local");
     debug_tools::logPrefix = PREFIX;
 
     client.setServer(host, 1883); // rpi server
@@ -141,11 +148,14 @@ void setup()
     ArduinoOTA.begin();
 
     communication::initQueue();
+    
     // main mqtt task
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
-    xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task);
+    xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
     // monitoring tasks
-    xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
+    #ifdef ENABLE_MONITORING
+    xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask); // task monitor
+    #endif
     debug_tools::logMessage("Tasks created, watchdog armed!");
 }
 
@@ -155,10 +165,13 @@ void loop()
     ArduinoOTA.handle();
 }
 
+
+///////////////////// Tasks
+
 // MQTT loop task
 void taskMQTT(void *pvParameters)
 {
-    esp_task_wdt_add(NULL);
+    esp_task_wdt_add(NULL); // watchdog
     for (;;)
     {
         client.loop(); // <--- processes incoming MQTT messages
@@ -167,7 +180,7 @@ void taskMQTT(void *pvParameters)
         {
             client.publish(msg.topic, msg.payload);
         }
-        esp_task_wdt_reset();
+        esp_task_wdt_reset(); // reset watchdog
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
@@ -242,4 +255,19 @@ void taskStackMonitor(void *pvParameters)
 #endif
         vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
     }
+}
+
+
+
+//////// utils functions
+
+// set hostname for my chickenCOOP server
+void setupMDNS(const char* hostname) {
+    if (!MDNS.begin(hostname)) {
+        Serial.println("mDNS failed to start");
+        // fail and go further...
+    }
+    MDNS.addService("_http", "_tcp", 80);
+    MDNS.addService("ota", "tcp", 3232); // OTA updates, wireless flash the board
+    MDNS.addService("mqtt", "tcp", 1883);
 }
