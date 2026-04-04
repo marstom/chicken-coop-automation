@@ -11,6 +11,7 @@ This is chicken coop monitor.
 #include "esp_task_wdt.h"
 
 #include <HTTPClient.h>
+#include <PubSubClient.h>
 
 // for BME
 #include <Adafruit_Sensor.h>
