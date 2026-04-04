@@ -33,3 +33,9 @@ Hardware;
 
 
 
+
+### Idee
+
+- monitoring, dashboard ELK stack
+- Broker on RabbitMQ + MQTT plugin
+- use knowldge mDns for dashboards where I can setup device!
