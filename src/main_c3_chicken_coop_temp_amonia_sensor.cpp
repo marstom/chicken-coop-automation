@@ -228,6 +228,7 @@ void taskReadBME280(void *pvParameters)
     char buf[16];
     Wire.begin(D4, D5); // 6 7
     communication::MqttMessage msg;
+    communication::WebMessage webMsg;
 
     if (!bme.begin(0x76, &Wire))
     {
@@ -242,11 +243,14 @@ void taskReadBME280(void *pvParameters)
         snprintf(buf, sizeof(buf), "%.2f", bme.readTemperature());
         Serial.println(buf);
         msg.setContent(BME_TEMPERATURE_TOPIC, buf);
+        webMsg.setContent(BME_TEMPERATURE_TOPIC, buf);
         msg.sendToQueue();
+        webMsg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readPressure());
         Serial.println(buf);
         msg.setContent(BME_PRESSURE_TOPIC, buf);
+        // webMsg.setContent(BME_PRESSURE_TOPIC, buf);
         msg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readAltitude(SEALEVELPRESSURE_HPA));
@@ -350,6 +354,14 @@ void simpleWebPage()
 
 void handleRootPage()
 {
+    char *webBuff = NULL;
+    communication::WebMessage webMsg;
+    if (xQueueReceive(communication::webQueue, &webMsg, 0))
+    {
+            webBuff = webMsg.getBuffer();
+    }
+
+
     String html;
     html.reserve(512);
     html += "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">";
@@ -363,6 +375,8 @@ void handleRootPage()
     html += " s</code></p>";
     html += "<p>Free heap: <code>";
     html += String(ESP.getFreeHeap());
+    html += "<p>Temp: <code>";
+    html += String(webBuff);
     html += " bytes</code></p>";
     html += "<p>Check <code>/health</code> for a lightweight status endpoint.</p>";
     html += "</body></html>";

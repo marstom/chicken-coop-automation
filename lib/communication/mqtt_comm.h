@@ -7,6 +7,7 @@ namespace communication
 {
     QueueHandle_t mqttQueue;
     QueueHandle_t relayQueue;
+    QueueHandle_t webQueue;
 
     struct RelayCommand
     {
@@ -33,12 +34,12 @@ namespace communication
         char topic[32];
         char payload[64];
 
-        MqttMessage() {
+        MqttMessage()
+        {
         }
 
-
-        ~MqttMessage() {
-
+        ~MqttMessage()
+        {
         }
         /// Copy topic and payload into the internal fixed-size buffers.
         void setContent(const char *t, const char *msg)
@@ -59,9 +60,46 @@ namespace communication
         }
     };
 
-    void initQueue(){
-            mqttQueue = xQueueCreate(200, sizeof(MqttMessage));
-            relayQueue = xQueueCreate(2, sizeof(RelayCommand));
+    /**
+     * This is queue for a webpage
+     * it has reads of temperature etc. and
+     * I can push data to queue
+     * and receive it in different task
+     *
+     */
+    class WebMessage
+    {
+    public:
+        void setContent(const char *t, const char *msg)
+        {
+            strncpy(buffer, msg, sizeof(buffer));
+            buffer[sizeof(buffer) - 1] = '\0';
+        }
 
+        char *getBuffer()
+        {
+            return buffer;
+        }
+
+        void sendToQueue()
+        {
+            if (!webQueue)
+                return;
+            if (xQueueSend(webQueue, this, 0) != pdTRUE)
+            {                                     // when queue is full, drop sth
+                xQueueReceive(webQueue, this, 0); // remove oldest
+                xQueueSend(webQueue, this, 0);    // try again
+            }
+        }
+
+    private:
+        char buffer[64];
+    };
+
+    void initQueue()
+    {
+        mqttQueue = xQueueCreate(200, sizeof(MqttMessage));
+        relayQueue = xQueueCreate(2, sizeof(RelayCommand));
+        webQueue = xQueueCreate(12, sizeof(WebMessage));
     }
 }
