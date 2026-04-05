@@ -243,7 +243,7 @@ void taskReadBME280(void *pvParameters)
         snprintf(buf, sizeof(buf), "%.2f", bme.readTemperature());
         Serial.println(buf);
         msg.setContent(BME_TEMPERATURE_TOPIC, buf);
-        webMsg.setContent(BME_TEMPERATURE_TOPIC, buf);
+        webMsg.setContent(communication::WebMessage::temperature, buf);
         msg.sendToQueue();
         webMsg.sendToQueue();
 
@@ -355,10 +355,12 @@ void simpleWebPage()
 void handleRootPage()
 {
     char *webBuff = NULL;
+    char *type = NULL;
     communication::WebMessage webMsg;
     if (xQueueReceive(communication::webQueue, &webMsg, 0))
     {
             webBuff = webMsg.getBuffer();
+            type = webMsg.getMessageType();
     }
 
 
@@ -375,7 +377,8 @@ void handleRootPage()
     html += " s</code></p>";
     html += "<p>Free heap: <code>";
     html += String(ESP.getFreeHeap());
-    html += "<p>Temp: <code>";
+    html += "<p>: <code>";
+    html += String(type);
     html += String(webBuff);
     html += " bytes</code></p>";
     html += "<p>Check <code>/health</code> for a lightweight status endpoint.</p>";

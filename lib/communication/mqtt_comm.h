@@ -70,15 +70,26 @@ namespace communication
     class WebMessage
     {
     public:
-        void setContent(const char *t, const char *msg)
+        static constexpr const char *temperature = "temperature";
+        static constexpr const char *humidity = "humidity";
+        static constexpr const char *pressure = "pressure";
+
+        void setContent(const char *messageType, const char *msg)
         {
             strncpy(buffer, msg, sizeof(buffer));
             buffer[sizeof(buffer) - 1] = '\0';
+
+            strncpy(msgType, messageType, sizeof(msgType));
         }
 
         char *getBuffer()
         {
             return buffer;
+        }
+
+        char *getMessageType()
+        {
+            return msgType;
         }
 
         void sendToQueue()
@@ -94,6 +105,7 @@ namespace communication
 
     private:
         char buffer[64];
+        char msgType[12];
     };
 
     void initQueue()
