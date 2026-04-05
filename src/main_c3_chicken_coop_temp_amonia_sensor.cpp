@@ -60,7 +60,7 @@ dns-sd -B _http._tcp
 
 // MQTT stuff
 #define MDNS_HOSTNAME "chicken"
-#define THINGNAME "esp32-c3-coop-temp-amonia-sensor-k31hfaie"
+#define THINGNAME "esp32-c3-coop-temp-amonia-sensor" // thing name for MQTT broker
 #define PREFIX "coop/"
 #define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
 #define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
@@ -169,7 +169,7 @@ void setup()
 
     // main mqtt task
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
-    // xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
+    xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
     xTaskCreate(taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
 // xTaskCreate(amoniaSensorTask, "amoniaSensorTask", 2048 * 4, NULL, 1, NULL);
 // monitoring tasks
@@ -240,18 +240,22 @@ void taskReadBME280(void *pvParameters)
     for (;;)
     {
         snprintf(buf, sizeof(buf), "%.2f", bme.readTemperature());
+        Serial.println(buf);
         msg.setContent(BME_TEMPERATURE_TOPIC, buf);
         msg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readPressure());
+        Serial.println(buf);
         msg.setContent(BME_PRESSURE_TOPIC, buf);
         msg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readAltitude(SEALEVELPRESSURE_HPA));
+        Serial.println(buf);
         msg.setContent(BME_ALTITUDE_TOPIC, buf);
         msg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readHumidity());
+        Serial.println(buf);
         msg.setContent(BME_HUMIDITY_TOPIC, buf);
         msg.sendToQueue();
 
