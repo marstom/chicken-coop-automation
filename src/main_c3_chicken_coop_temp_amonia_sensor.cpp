@@ -243,8 +243,8 @@ void taskReadBME280(void *pvParameters)
         snprintf(buf, sizeof(buf), "%.2f", bme.readTemperature());
         Serial.println(buf);
         msg.setContent(BME_TEMPERATURE_TOPIC, buf);
-        webMsg.setContent(communication::WebMessage::temperature, buf);
         msg.sendToQueue();
+        webMsg.setContent(communication::WebMessage::temperature, buf);
         webMsg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readPressure());
@@ -252,16 +252,22 @@ void taskReadBME280(void *pvParameters)
         msg.setContent(BME_PRESSURE_TOPIC, buf);
         // webMsg.setContent(BME_PRESSURE_TOPIC, buf);
         msg.sendToQueue();
+        webMsg.setContent(communication::WebMessage::pressure, buf);
+        webMsg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readAltitude(SEALEVELPRESSURE_HPA));
         Serial.println(buf);
         msg.setContent(BME_ALTITUDE_TOPIC, buf);
         msg.sendToQueue();
+        webMsg.setContent(communication::WebMessage::altitude, buf);
+        webMsg.sendToQueue();
 
         snprintf(buf, sizeof(buf), "%.2f", bme.readHumidity());
         Serial.println(buf);
         msg.setContent(BME_HUMIDITY_TOPIC, buf);
         msg.sendToQueue();
+        webMsg.setContent(communication::WebMessage::humidity, buf);
+        webMsg.sendToQueue();
 
         esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -298,16 +304,17 @@ void taskWebServer(void *pvParameters)
 void setupMDNS(const char *hostname)
 {
 
-    //initialize mDNS service
+    // initialize mDNS service
     esp_err_t err = mdns_init();
-    if (err) {
+    if (err)
+    {
         printf("MDNS Init failed: %d\n", err);
         return;
     }
 
-    //set hostname
+    // set hostname
     mdns_hostname_set(hostname);
-    //set default instance
+    // set default instance
     mdns_instance_name_set("Chicken Coop");
 
     Serial.print("mDNS started: http://");
@@ -317,7 +324,7 @@ void setupMDNS(const char *hostname)
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
-    //add our services
+    // add our services
     mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
     mdns_service_add(NULL, "_ota", "_tcp", 3232, NULL, 0);
     mdns_service_add(NULL, "mqtt", "_tcp", 1883, NULL, 0);
@@ -356,13 +363,35 @@ void handleRootPage()
 {
     char *webBuff = NULL;
     char *type = NULL;
+    String temp = "";
+    String press = "";
+    String hum = "";
+    String alt = "";
     communication::WebMessage webMsg;
-    if (xQueueReceive(communication::webQueue, &webMsg, 0))
+    while (xQueueReceive(communication::webQueue, &webMsg, 0) != pdFALSE)
     {
-            webBuff = webMsg.getBuffer();
-            type = webMsg.getMessageType();
-    }
+        webBuff = webMsg.getBuffer();
+        type = webMsg.getMessageType();
+        // String tt = String(type);
+         bool exists = type != NULL && webBuff != NULL;
+        if (strcmp(type, communication::WebMessage::temperature) == 0 && exists)
+        {
+            temp = String(webBuff) + " C   ";
+        }
+        else if (strcmp(type, communication::WebMessage::pressure) == 0 && exists)
+        {
+            press = String(webBuff) + " hPa   ";
+        }
+        else if (strcmp(type, communication::WebMessage::altitude) == 0 && exists)
+        {
+            alt = String(webBuff) + " m        ";
+        }
 
+        else if (strcmp(type, communication::WebMessage::humidity) == 0 && exists)
+        {
+            hum = String(webBuff) + " %   ";
+        }
+    }
 
     String html;
     html.reserve(512);
@@ -377,9 +406,8 @@ void handleRootPage()
     html += " s</code></p>";
     html += "<p>Free heap: <code>";
     html += String(ESP.getFreeHeap());
-    html += "<p>: <code>";
-    html += String(type);
-    html += String(webBuff);
+    html += "<p>Parameters: <code>";
+    html += temp + press + alt + hum;
     html += " bytes</code></p>";
     html += "<p>Check <code>/health</code> for a lightweight status endpoint.</p>";
     html += "</body></html>";

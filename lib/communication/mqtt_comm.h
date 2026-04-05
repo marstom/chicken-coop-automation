@@ -73,6 +73,7 @@ namespace communication
         static constexpr const char *temperature = "temperature";
         static constexpr const char *humidity = "humidity";
         static constexpr const char *pressure = "pressure";
+        static constexpr const char *altitude = "altitude";
 
         void setContent(const char *messageType, const char *msg)
         {
