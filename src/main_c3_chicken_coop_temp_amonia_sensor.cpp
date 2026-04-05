@@ -2,6 +2,10 @@
 /*
 
 This is chicken coop monitor.
+
+List of all mdns devices is:
+dns-sd -B _http._tcp
+
 */
 
 #include <stdarg.h>
@@ -146,7 +150,7 @@ void setup()
     // Init wireless updates
     debug_tools::logMessage("Initialize OTA updates via Wireless");
     debug_tools::logMessage("UPDATE VIA OTA");
-    ArduinoOTA.setHostname("esp32c3"); // must match upload_port in platformio.ini
+    ArduinoOTA.setHostname("chicken"); // must match upload_port in platformio.ini
     // remote code upload
     ArduinoOTA
         .onStart([]()
@@ -282,14 +286,21 @@ void taskWebServer(void *pvParameters)
 //////// utils functions
 
 // set hostname for my chickenCOOP server
+// https://docs.espressif.com/projects/esp-idf/en/v4.3/esp32c3/api-reference/protocols/mdns.html
 void setupMDNS(const char *hostname)
 {
-    MDNS.end();
-    if (!MDNS.begin(hostname))
-    {
-        Serial.println("mDNS failed to start");
+
+    //initialize mDNS service
+    esp_err_t err = mdns_init();
+    if (err) {
+        printf("MDNS Init failed: %d\n", err);
         return;
     }
+
+    //set hostname
+    mdns_hostname_set(hostname);
+    //set default instance
+    mdns_instance_name_set("Chicken Coop");
 
     Serial.print("mDNS started: http://");
     Serial.print(hostname);
@@ -298,8 +309,10 @@ void setupMDNS(const char *hostname)
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
-    MDNS.addService("http", "tcp", 80);
-    // MDNS.addService("ota", "tcp", 3232);
+    //add our services
+    mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
+    mdns_service_add(NULL, "_ota", "_tcp", 3232, NULL, 0);
+    mdns_service_add(NULL, "mqtt", "_tcp", 1883, NULL, 0);
 }
 
 void onWiFiEvent(WiFiEvent_t event)
