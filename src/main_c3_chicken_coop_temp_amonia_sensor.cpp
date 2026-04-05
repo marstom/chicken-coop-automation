@@ -359,14 +359,15 @@ void simpleWebPage()
     webServer.begin();
 }
 
+String temp = "";
+String press = "";
+String hum = "";
+String alt = "";
 void handleRootPage()
 {
     char *webBuff = NULL;
     char *type = NULL;
-    String temp = "";
-    String press = "";
-    String hum = "";
-    String alt = "";
+
     communication::WebMessage webMsg;
     while (xQueueReceive(communication::webQueue, &webMsg, 0) != pdFALSE)
     {
@@ -374,20 +375,20 @@ void handleRootPage()
         type = webMsg.getMessageType();
         // String tt = String(type);
          bool exists = type != NULL && webBuff != NULL;
-        if (strcmp(type, communication::WebMessage::temperature) == 0 && exists)
+        if (exists && strcmp(type, communication::WebMessage::temperature) == 0)
         {
             temp = String(webBuff) + " C   ";
         }
-        else if (strcmp(type, communication::WebMessage::pressure) == 0 && exists)
+        else if (exists && strcmp(type, communication::WebMessage::pressure) == 0)
         {
             press = String(webBuff) + " hPa   ";
         }
-        else if (strcmp(type, communication::WebMessage::altitude) == 0 && exists)
+        else if (exists && strcmp(type, communication::WebMessage::altitude) == 0)
         {
             alt = String(webBuff) + " m        ";
         }
 
-        else if (strcmp(type, communication::WebMessage::humidity) == 0 && exists)
+        else if (exists && strcmp(type, communication::WebMessage::humidity) == 0)
         {
             hum = String(webBuff) + " %   ";
         }
