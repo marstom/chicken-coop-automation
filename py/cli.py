@@ -98,11 +98,63 @@ def list_of_mdns_services():
     input("Press enter to exit...\n")
     zeroconf.close()
 
+@cli.command()
+def sub(
+    broker: str = "raspberrypi.local",
+    port: int = 1883,
+    topic: str = "coop/bme280/#",
+    username: str | None = 'admin',
+    password: str | None = 'admin',
+):
+    import paho.mqtt.client as mqtt
+    from urllib.parse import urlparse
+
+    # paho-mqtt expects a hostname/IP, not a URL.
+    parsed_broker = urlparse(broker)
+    mqtt_host = parsed_broker.hostname or broker.rstrip("/")
+
+    def on_connect(client, userdata, flags, reason_code, properties=None):
+        print("Connected with result code", reason_code)
+        reason_text = str(reason_code).lower()
+        is_auth_error = (
+            reason_text == "not authorized"
+            or getattr(reason_code, "value", None) == 5
+            or reason_code == 5
+        )
+        if is_auth_error:
+            typer.echo(
+                "MQTT authentication failed: bad username or password.",
+                err=True,
+            )
+            client.disconnect()
+            return
+        client.subscribe(topic)
+
+    def on_message(client, userdata, msg):
+        print(f"[{msg.topic}] {msg.payload.decode()}")
+
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+
+    if username:
+        client.username_pw_set(username, password)
+
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    print(f"Connecting to MQTT broker {mqtt_host}:{port}, topic: {topic}")
+    try:
+        client.connect(mqtt_host, port, 60)
+    except Exception as exc:
+        typer.echo(
+            "MQTT connection failed. Use a hostname/IP like "
+            "'raspberrypi.local' or '192.168.x.x', not 'http://...'. "
+            f"Original error: {exc}",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    client.loop_forever()
 
 
 if __name__ == "__main__":
     cli()
-
-
-
-
