@@ -44,4 +44,4 @@ Steps:
 - cd services, docker compose up, then enable mqtt plugin using ./enable_mqtt_plugin;
 - Now dashboard is available http://raspberrypi.local:15672/#/, creds are: admin admin.
 
-- Topics 
+- Now run python helper `./cli.py sub`, this will display you tempereatures, pressure etc.
