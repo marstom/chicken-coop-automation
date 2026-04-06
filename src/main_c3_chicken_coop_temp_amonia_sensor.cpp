@@ -104,6 +104,7 @@ void setupMDNS(const char *hostname);
 void simpleWebPage();                   // for demo purposes that mDNS works
 void taskWebServer(void *pvParameters); // simple web page for demo
 void handleRootPage();                  // handle the page for above task
+void handleJsonAPI();
 void onWiFiEvent(WiFiEvent_t event);
 
 void setup()
@@ -350,6 +351,7 @@ void onWiFiEvent(WiFiEvent_t event)
 void simpleWebPage()
 {
     webServer.on("/", handleRootPage);
+    webServer.on("/api/v1/", handleJsonAPI);
     webServer.on("/health", []()
                  { webServer.send(200, "application/json", "{\"status\":\"ok\"}"); });
     webServer.on("/favicon.ico", []()
@@ -363,7 +365,8 @@ String temp = "";
 String press = "";
 String hum = "";
 String alt = "";
-void handleRootPage()
+
+void readSensorsToStrings()
 {
     char *webBuff = NULL;
     char *type = NULL;
@@ -374,44 +377,200 @@ void handleRootPage()
         webBuff = webMsg.getBuffer();
         type = webMsg.getMessageType();
         // String tt = String(type);
-         bool exists = type != NULL && webBuff != NULL;
+        bool exists = type != NULL && webBuff != NULL;
         if (exists && strcmp(type, communication::WebMessage::temperature) == 0)
         {
-            temp = String(webBuff) + " C   ";
+            temp = String(webBuff);
         }
         else if (exists && strcmp(type, communication::WebMessage::pressure) == 0)
         {
-            press = String(webBuff) + " hPa   ";
+            press = String(webBuff);
         }
         else if (exists && strcmp(type, communication::WebMessage::altitude) == 0)
         {
-            alt = String(webBuff) + " m        ";
+            alt = String(webBuff);
         }
 
         else if (exists && strcmp(type, communication::WebMessage::humidity) == 0)
         {
-            hum = String(webBuff) + " %   ";
+            hum = String(webBuff);
         }
     }
+}
 
-    String html;
-    html.reserve(512);
-    html += "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">";
-    html += "<title>Chicken Coop Sensor</title>";
-    html += "<style>body{font-family:Arial,sans-serif;margin:24px;line-height:1.5;}h1{margin-bottom:8px;}code{background:#f3f3f3;padding:2px 6px;border-radius:4px;}</style>";
-    html += "</head><body>";
-    html += "<h1>Chicken Coop Sensor</h1>";
-    html += "<p>Device is running.</p>";
-    html += "<p>Uptime: <code>";
-    html += String(millis() / 1000);
-    html += " s</code></p>";
-    html += "<p>Free heap: <code>";
-    html += String(ESP.getFreeHeap());
-    html += "<p>Parameters: <code>";
-    html += temp + press + alt + hum;
-    html += " bytes</code></p>";
-    html += "<p>Check <code>/health</code> for a lightweight status endpoint.</p>";
-    html += "</body></html>";
 
-    webServer.send(200, "text/html", html);
+static const char INDEX_HTML[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chicken Coop Gauges</title>
+  <script src="https://bernii.github.io/gauge.js/dist/gauge.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      background: #f4f6f8;
+      color: #222;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 24px;
+    }
+
+    .gauges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      justify-content: center;
+    }
+
+    .card {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      width: 280px;
+    }
+
+    canvas {
+      width: 220px;
+      height: 140px;
+    }
+
+    .value {
+      margin-top: 12px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .status {
+      margin-top: 20px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chicken Coop Sensor</h1>
+
+  <div class="gauges">
+    <div class="card">
+      <h3>Temperature</h3>
+      <canvas id="tempGauge"></canvas>
+      <div class="value" id="tempValue">--</div>
+    </div>
+
+    <div class="card">
+      <h3>Humidity</h3>
+      <canvas id="humGauge"></canvas>
+      <div class="value" id="humValue">--</div>
+    </div>
+
+    <div class="card">
+      <h3>Pressure</h3>
+      <canvas id="pressGauge"></canvas>
+      <div class="value" id="pressValue">--</div>
+    </div>
+
+    <div class="card">
+      <h3>Altitude</h3>
+      <canvas id="altGauge"></canvas>
+      <div class="value" id="altValue">--</div>
+    </div>
+  </div>
+
+  <div class="status" id="status">Loading...</div>
+
+  <script>
+    function createGauge(targetId, min, max) {
+      const target = document.getElementById(targetId);
+      const gauge = new Gauge(target).setOptions({
+        angle: 0.15,
+        lineWidth: 0.2,
+        radiusScale: 1,
+        pointer: {
+          length: 0.6,
+          strokeWidth: 0.035,
+          color: "#000"
+        },
+        staticLabels: {
+          font: "10px sans-serif",
+          color: "#333",
+          labels: [min, (min + max) / 2, max],
+          fractionDigits: 0
+        },
+        staticZones: [
+          { strokeStyle: "#30B32D", min: min, max: min + (max - min) * 0.5 },
+          { strokeStyle: "#FFDD00", min: min + (max - min) * 0.5, max: min + (max - min) * 0.8 },
+          { strokeStyle: "#F03E3E", min: min + (max - min) * 0.8, max: max }
+        ],
+        limitMin: false,
+        limitMax: false,
+        highDpiSupport: true
+      });
+
+      gauge.maxValue = max;
+      gauge.setMinValue(min);
+      gauge.animationSpeed = 32;
+      gauge.set(min);
+      return gauge;
+    }
+
+    const tempGauge = createGauge("tempGauge", -20, 50);
+    const humGauge = createGauge("humGauge", 0, 100);
+    const pressGauge = createGauge("pressGauge", 950, 1050);
+    const altGauge = createGauge("altGauge", 0, 500);
+
+    async function loadData() {
+      try {
+        const response = await fetch("/api/v1/");
+        const data = await response.json();
+
+        const temperature = parseFloat(data.temperature);
+        const humidity = parseFloat(data.humidity);
+        const pressure = parseFloat(data.pressure) / 100.0;
+        const altitude = parseFloat(data.altitude);
+
+        tempGauge.set(temperature);
+        humGauge.set(humidity);
+        pressGauge.set(pressure);
+        altGauge.set(altitude);
+
+        document.getElementById("tempValue").textContent = temperature.toFixed(2) + " C";
+        document.getElementById("humValue").textContent = humidity.toFixed(2) + " %";
+        document.getElementById("pressValue").textContent = pressure.toFixed(2) + " hPa";
+        document.getElementById("altValue").textContent = altitude.toFixed(2) + " m";
+        document.getElementById("status").textContent = "Updated";
+      } catch (err) {
+        document.getElementById("status").textContent = "Failed to load data";
+        console.error(err);
+      }
+    }
+
+    loadData();
+    setInterval(loadData, 3000);
+  </script>
+</body>
+</html>
+)rawliteral";
+
+void handleRootPage()
+{
+    readSensorsToStrings();
+
+    webServer.send(200, "text/html", INDEX_HTML);
+}
+
+void handleJsonAPI()
+{
+    readSensorsToStrings();
+    String json = "{";
+    json += "\"temperature\":\"" + temp + "\",";
+    json += "\"pressure\":\"" + press + "\",";
+    json += "\"humidity\":\"" + hum + "\",";
+    json += "\"altitude\":\"" + alt + "\"";
+    json += "}";
+
+    webServer.send(200, "application/json", json);
 }
