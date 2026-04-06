@@ -29,15 +29,11 @@ dns-sd -B _http._tcp
 // BLE support
 #include <ArduinoBLE.h>
 
-// mDNS support
-#include <ESPmDNS.h>
-
 // my libs
 #include "secrets.h"
 #include "wifi_conn.h"
 #include "mqtt_comm.h"
 #include "debug_tools.h"
-#include "gauge_page_chicken_coop.h"
 #include "chicken_coop/tasks.h"
 #include "chicken_coop/constants.h"
 #include "chicken_coop/web.h"
@@ -55,14 +51,6 @@ TaskHandle_t hWebServerTask = NULL;
 
 /// make mqtt thread safe
 void mycallback(char *topic, byte *message, unsigned int length);
-
-void setupMDNS(const char *hostname);
-void simpleWebPage();                   // for demo purposes that mDNS works
-void taskWebServer(void *pvParameters); // simple web page for demo
-void handleRootPage();                  // handle the page for above task
-void handleJsonAPI();
-void onWiFiEvent(WiFiEvent_t event);
-bool connectToMqttBroker();
 
 void setup()
 {
@@ -160,132 +148,5 @@ void mycallback(char *topic, byte *message, unsigned int length)
     xQueueSend(communication::relayQueue, &cmd, 0); // queue is thread safe
 }
 
-bool connectToMqttBroker()
-{
-    if (MQTT_USER[0] != '\0')
-    {
-        return client.connect(THINGNAME, MQTT_USER, MQTT_PASS);
-    }
-
-    return client.connect(THINGNAME);
-}
-
 //////// utils functions
 
-// set hostname for my chickenCOOP server
-// https://docs.espressif.com/projects/esp-idf/en/v4.3/esp32c3/api-reference/protocols/mdns.html
-void setupMDNS(const char *hostname)
-{
-
-    // initialize mDNS service
-    esp_err_t err = mdns_init();
-    if (err)
-    {
-        printf("MDNS Init failed: %d\n", err);
-        return;
-    }
-
-    // set hostname
-    mdns_hostname_set(hostname);
-    // set default instance
-    mdns_instance_name_set("Chicken Coop");
-
-    Serial.print("mDNS started: http://");
-    Serial.print(hostname);
-    Serial.println(".local");
-
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    // add our services
-    mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
-    mdns_service_add(NULL, "_ota", "_tcp", 3232, NULL, 0);
-    mdns_service_add(NULL, "mqtt", "_tcp", 1883, NULL, 0);
-}
-
-void onWiFiEvent(WiFiEvent_t event)
-{
-    switch (event)
-    {
-    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-        Serial.print("WiFi connected, IP: ");
-        Serial.println(WiFi.localIP());
-        setupMDNS(MDNS_HOSTNAME);
-        break;
-    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        Serial.println("WiFi disconnected, waiting for reconnect...");
-        break;
-    default:
-        break;
-    }
-}
-
-void simpleWebPage()
-{
-    webServer.on("/", handleRootPage);
-    webServer.on("/api/v1/", handleJsonAPI);
-    webServer.on("/health", []()
-                 { webServer.send(200, "application/json", "{\"status\":\"ok\"}"); });
-    webServer.on("/favicon.ico", []()
-                 { webServer.send(200, "image/x-icon", ""); });
-    webServer.onNotFound([]()
-                         { webServer.send(404, "text/plain", "404: Not Found"); });
-    webServer.begin();
-}
-
-String temp = "";
-String press = "";
-String hum = "";
-String alt = "";
-
-void readSensorsToStrings()
-{
-    char *webBuff = NULL;
-    char *type = NULL;
-
-    communication::WebMessage webMsg;
-    while (xQueueReceive(communication::webQueue, &webMsg, 0) != pdFALSE)
-    {
-        webBuff = webMsg.getBuffer();
-        type = webMsg.getMessageType();
-        // String tt = String(type);
-        bool exists = type != NULL && webBuff != NULL;
-        if (exists && strcmp(type, communication::WebMessage::temperature) == 0)
-        {
-            temp = String(webBuff);
-        }
-        else if (exists && strcmp(type, communication::WebMessage::pressure) == 0)
-        {
-            press = String(webBuff);
-        }
-        else if (exists && strcmp(type, communication::WebMessage::altitude) == 0)
-        {
-            alt = String(webBuff);
-        }
-
-        else if (exists && strcmp(type, communication::WebMessage::humidity) == 0)
-        {
-            hum = String(webBuff);
-        }
-    }
-}
-
-void handleRootPage()
-{
-    readSensorsToStrings();
-
-    webServer.send(200, "text/html", INDEX_HTML);
-}
-
-void handleJsonAPI()
-{
-    readSensorsToStrings();
-    String json = "{";
-    json += "\"temperature\":\"" + temp + "\",";
-    json += "\"pressure\":\"" + press + "\",";
-    json += "\"humidity\":\"" + hum + "\",";
-    json += "\"altitude\":\"" + alt + "\"";
-    json += "}";
-
-    webServer.send(200, "application/json", json);
-}

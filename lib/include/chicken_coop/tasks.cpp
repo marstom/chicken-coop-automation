@@ -6,6 +6,7 @@
 #include "chicken_coop/tasks.h"
 #include "chicken_coop/constants.h"
 #include "chicken_coop/protocols.h"
+#include "secrets.h"
 
 PubSubClient client(net);
 
@@ -102,4 +103,14 @@ void taskWebServer(void *pvParameters)
         webServer.handleClient();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
+}
+
+bool connectToMqttBroker()
+{
+    if (MQTT_USER[0] != '\0')
+    {
+        return client.connect(THINGNAME, MQTT_USER, MQTT_PASS);
+    }
+
+    return client.connect(THINGNAME);
 }

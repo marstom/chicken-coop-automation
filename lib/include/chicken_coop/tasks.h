@@ -13,3 +13,5 @@ void taskAmoniaSensor(void *pvParameters); // TODO implement amonia sensor
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
 // void taskRelay(void *pvParameters);
 void taskTcpServer(void *pvParameters); // direct connection
+
+bool connectToMqttBroker();
