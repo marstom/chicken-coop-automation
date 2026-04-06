@@ -32,10 +32,11 @@ Hardware;
 - Intelhex problem fix: `pip install intelhex` (only on mac?)
 
 
-
-
 ### Idee
 
 - monitoring, dashboard ELK stack
 - Broker on RabbitMQ + MQTT plugin
 - use knowldge mDns for dashboards where I can setup device!
+
+## Android
+./Android folder contains android app which connects with mqtt broker, app is WIP, not works yet.

@@ -51,29 +51,29 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
   </style>
 </head>
 <body>
-  <h1>Chicken Coop Sensor</h1>
+  <h1>Kurnik monitorr</h1>
 
   <div class="gauges">
     <div class="card">
-      <h3>Temperature</h3>
+      <h3>Temperatura</h3>
       <canvas id="tempGauge"></canvas>
       <div class="value" id="tempValue">--</div>
     </div>
 
     <div class="card">
-      <h3>Humidity</h3>
+      <h3>Wilgotność</h3>
       <canvas id="humGauge"></canvas>
       <div class="value" id="humValue">--</div>
     </div>
 
     <div class="card">
-      <h3>Pressure</h3>
+      <h3>Ciśnienie</h3>
       <canvas id="pressGauge"></canvas>
       <div class="value" id="pressValue">--</div>
     </div>
 
     <div class="card">
-      <h3>Altitude</h3>
+      <h3>Wysokość</h3>
       <canvas id="altGauge"></canvas>
       <div class="value" id="altValue">--</div>
     </div>
@@ -140,9 +140,9 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
         document.getElementById("humValue").textContent = humidity.toFixed(2) + " %";
         document.getElementById("pressValue").textContent = pressure.toFixed(2) + " hPa";
         document.getElementById("altValue").textContent = altitude.toFixed(2) + " m";
-        document.getElementById("status").textContent = "Updated";
+        document.getElementById("status").textContent = "Aktualizacja Live";
       } catch (err) {
-        document.getElementById("status").textContent = "Failed to load data";
+        document.getElementById("status").textContent = "Problem z ladowaniem danych...";
         console.error(err);
       }
     }
