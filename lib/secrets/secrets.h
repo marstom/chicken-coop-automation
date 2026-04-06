@@ -1,3 +1,4 @@
+#pragma once
 /*
 
 How to?
@@ -12,33 +13,32 @@ build_flags =
 */
 
 #ifndef WIFI_SSID
-  #define WIFI_SSID "unset"
+#define WIFI_SSID "unset"
 #endif
 #ifndef SSID_OFFICE
-  #define SSID_OFFICE "unset"
+#define SSID_OFFICE "unset"
 #endif
 #ifndef SSID_KITCHEN
-  #define SSID_KITCHEN "unset"
+#define SSID_KITCHEN "unset"
 #endif
 #ifndef SSID_GARDEN
-  #define SSID_GARDEN "unset"
+#define SSID_GARDEN "unset"
 #endif
 #ifndef WIFI_PASS
-  #define WIFI_PASS "unset"
+#define WIFI_PASS "unset"
 #endif
 #ifndef MQTT_HOST
-  #define MQTT_HOST "raspberrypi.local"
+#define MQTT_HOST "raspberrypi.local"
 #endif
 #ifndef MQTT_PORT
-  #define MQTT_PORT 1883
+#define MQTT_PORT 1883
 #endif
 #ifndef MQTT_USER
-  #define MQTT_USER "admin"
+#define MQTT_USER "admin"
 #endif
 #ifndef MQTT_PASS
-  #define MQTT_PASS "admin"
+#define MQTT_PASS "admin"
 #endif
-
 
 /// Alternative - namespace
 // namespace secrets {

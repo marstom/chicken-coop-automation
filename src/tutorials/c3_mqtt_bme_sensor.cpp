@@ -12,7 +12,6 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
-
 // Constants
 
 // TODO: move to my library BME280
@@ -23,7 +22,6 @@
 #define SEALEVELPRESSURE_HPA (1013.25)
 Adafruit_BME280 bme; // I2C
 unsigned long delayTime;
-
 
 // Addressable RGB LED, driven by GPIO48.
 #define LED_PIN 48
@@ -42,8 +40,7 @@ unsigned long delayTime;
 // My rasberry pi server name
 const char *host = "raspberr ypi.local";
 WiFiClient net;
-PubSubClient client(net);
-
+PubSubC lient client(net);
 
 // put function declarations here:
 void taskHandleRGBLed(void *pvParameters);
@@ -95,22 +92,23 @@ void taskReadTemperature(void *pvParameters)
   }
 }
 
+void readTemperatureFromBME280(void *pvParameters)
+{
+  if (!bme.begin(0x77, &Wire))
+  {
+    Serial.println("Could not find a valid BME280 sensor, check wiring!");
+    while (1)
+      ;
+  }
 
-void readTemperatureFromBME280(void *pvParameters){
-    if (! bme.begin(0x77, &Wire)) {
-        Serial.println("Could not find a valid BME280 sensor, check wiring!");
-        while (1);
-    }
-
-
-  while(1){
+  while (1)
+  {
     float temperature = bme.readTemperature();
     float humidity = bme.readHumidity();
     float pressure = bme.readPressure() / 100.0F;
     String payload_temp = "{\"message\": \"" + String(temperature) + "\"}";
     String payload_hum = "{\"message\": \"" + String(humidity) + "\"}";
     String payload_press = "{\"message\": \"" + String(pressure) + "\"}";
-
 
     Serial.print("Temp: ");
     Serial.print(temperature);
@@ -120,7 +118,6 @@ void readTemperatureFromBME280(void *pvParameters){
     Serial.print(pressure);
     Serial.println(" hPa");
 
-
     client.publish(BME_280_TEMPERATURE_TOPIC, payload_temp.c_str());
     client.publish(BME_280_HUMIDITY_TOPIC, payload_hum.c_str());
     client.publish(BME_280_PRESSURE_TOPIC, payload_press.c_str());
@@ -128,19 +125,17 @@ void readTemperatureFromBME280(void *pvParameters){
   }
 }
 
-
-
-void relaysControl(void *pvParameters){
-  //control the relays 1 and 2
+void relaysControl(void *pvParameters)
+{
+  // control the relays 1 and 2
   pinMode(26, OUTPUT); // TODO check pins
   pinMode(27, OUTPUT);
 
   client.subscribe(RELAY_1_TOPIC_W);
   client.subscribe(RELAY_2_TOPIC_W);
-  while(1){
-    
-    vTaskDelay(pdMS_TO_TICKS(1200));
+  while (1)
+  {
 
-    
+    vTaskDelay(pdMS_TO_TICKS(1200));
   }
 }

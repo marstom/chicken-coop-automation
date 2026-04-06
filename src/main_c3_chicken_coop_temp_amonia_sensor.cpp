@@ -16,12 +16,8 @@ dns-sd -B _http._tcp
 #include "esp_task_wdt.h"
 
 #include <HTTPClient.h>
-#include <PubSubClient.h>
-#include <WebServer.h>
 
-// for BME
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
+#include <WebServer.h>
 
 // heap monitoring
 #include "esp_heap_caps.h"
@@ -42,50 +38,14 @@ dns-sd -B _http._tcp
 #include "mqtt_comm.h"
 #include "debug_tools.h"
 #include "gauge_page_chicken_coop.h"
-
-// Hardware feature toggle, comment out hardware which you don't need
-#define DEVICE_BME_280_ENABLED // enable bme280 temp/humidity sensor
-// #define ENABLE_MONITORING
-
-// Addressable RGB LED, driven by GPIO48.
-#define LED_PIN 48
-#define WDT_TIMEOUT 30
-
-#define RELAY_PIN D0
-
-// BME temperature and humidity sensor, connected to i2c bus in current setup
-#define BME_SCK D8
-#define BME_MISO D9
-#define BME_MOSI D10
-#define BME_CS D7
-
-// MQTT stuff
-#define MDNS_HOSTNAME "chicken"
-#define THINGNAME "esp32-c3-coop-temp-amonia-sensor" // thing name for MQTT broker
-#define PREFIX "coop/"
-#define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
-#define BME_TEMPERATURE_TOPIC PREFIX "bme280/temperature"
-#define BME_PRESSURE_TOPIC PREFIX "bme280/pressure"
-#define BME_HUMIDITY_TOPIC PREFIX "bme280/humidity"
-#define BME_ALTITUDE_TOPIC PREFIX "bme280/altitude"
-#define MQTT_LOG_TOPIC PREFIX "log/mydebug"
-#define STATUS_TOPIC PREFIX "status/read"
-#define RELAY_1_SET_TOPIC PREFIX "relay/1/set"
-
-#define I2C_SDA D4
-#define I2C_SCL D5
-
-#define SEALEVELPRESSURE_HPA (1013.25)
-Adafruit_BME280 bme; // I2C
+#include "chicken_coop/tasks.h"
+#include "chicken_coop/constants.h"
+#include "chicken_coop/web.h"
 
 // MQTT broker settings
 const char *host = MQTT_HOST;
 const uint16_t mqttPort = MQTT_PORT;
 // TODO change WIFI access point outside !
-WiFiClient net;
-
-PubSubClient client(net);
-WebServer webServer(80);
 
 // --- Task handles (needed for stack monitoring) ---
 TaskHandle_t hMQTTTask = NULL;
@@ -95,13 +55,7 @@ TaskHandle_t hWebServerTask = NULL;
 
 /// make mqtt thread safe
 void mycallback(char *topic, byte *message, unsigned int length);
-void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the messages!
-void taskReadBME280(void *pvParameters);
-void amoniaSensorTask(void *pvParameters); // TODO implement amonia sensor
 
-void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
-// void taskRelay(void *pvParameters);
-void tcpServerTask(void *pvParameters); // direct connection
 void setupMDNS(const char *hostname);
 void simpleWebPage();                   // for demo purposes that mDNS works
 void taskWebServer(void *pvParameters); // simple web page for demo
@@ -175,7 +129,7 @@ void setup()
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
     xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
     xTaskCreate(taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
-// xTaskCreate(amoniaSensorTask, "amoniaSensorTask", 2048 * 4, NULL, 1, NULL);
+// xTaskCreate(taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
 // monitoring tasks
 #ifdef ENABLE_MONITORING
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask); // task monitor
@@ -192,23 +146,6 @@ void loop()
 }
 
 ///////////////////// Tasks
-
-// MQTT loop task
-void taskMQTT(void *pvParameters)
-{
-    esp_task_wdt_add(NULL); // watchdog
-    for (;;)
-    {
-        client.loop(); // <--- processes incoming MQTT messages
-        communication::MqttMessage msg;
-        if (xQueueReceive(communication::mqttQueue, &msg, 0))
-        {
-            client.publish(msg.topic, msg.payload);
-        }
-        esp_task_wdt_reset(); // reset watchdog
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-}
 
 void mycallback(char *topic, byte *message, unsigned int length)
 {
@@ -231,84 +168,6 @@ bool connectToMqttBroker()
     }
 
     return client.connect(THINGNAME);
-}
-
-/// @brief Temperature sensor
-/// @param pvParameters
-void taskReadBME280(void *pvParameters)
-{
-    esp_task_wdt_add(NULL);
-
-    char buf[16];
-    Wire.begin(D4, D5); // 6 7
-    communication::MqttMessage msg;
-    communication::WebMessage webMsg;
-
-    if (!bme.begin(0x76, &Wire))
-    {
-        if (!bme.begin(0x77, &Wire))
-        {
-            debug_tools::logMessage("Could not find a valid BME280 sensor, check wiring!");
-            vTaskDelete(NULL); // delete task immediately if fails
-        }
-    }
-    for (;;)
-    {
-        snprintf(buf, sizeof(buf), "%.2f", bme.readTemperature());
-        Serial.println(buf);
-        msg.setContent(BME_TEMPERATURE_TOPIC, buf);
-        msg.sendToQueue();
-        webMsg.setContent(communication::WebMessage::temperature, buf);
-        webMsg.sendToQueue();
-
-        snprintf(buf, sizeof(buf), "%.2f", bme.readPressure());
-        Serial.println(buf);
-        msg.setContent(BME_PRESSURE_TOPIC, buf);
-        // webMsg.setContent(BME_PRESSURE_TOPIC, buf);
-        msg.sendToQueue();
-        webMsg.setContent(communication::WebMessage::pressure, buf);
-        webMsg.sendToQueue();
-
-        snprintf(buf, sizeof(buf), "%.2f", bme.readAltitude(SEALEVELPRESSURE_HPA));
-        Serial.println(buf);
-        msg.setContent(BME_ALTITUDE_TOPIC, buf);
-        msg.sendToQueue();
-        webMsg.setContent(communication::WebMessage::altitude, buf);
-        webMsg.sendToQueue();
-
-        snprintf(buf, sizeof(buf), "%.2f", bme.readHumidity());
-        Serial.println(buf);
-        msg.setContent(BME_HUMIDITY_TOPIC, buf);
-        msg.sendToQueue();
-        webMsg.setContent(communication::WebMessage::humidity, buf);
-        webMsg.sendToQueue();
-
-        esp_task_wdt_reset();
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
-
-// --- New task: device monitoring, for troubleshooting ---
-void taskStackMonitor(void *pvParameters)
-{
-    for (;;)
-    {
-#ifdef ENABLE_MONITORING
-        debug_tools::printStackInfo("MQTTTask", hMQTTTask);
-        debug_tools::printStackInfo("BME280Task", hBME280Task);
-        debug_tools::printHeap(); // DEBUG memory leaks
-#endif
-        vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
-    }
-}
-
-void taskWebServer(void *pvParameters)
-{
-    for (;;)
-    {
-        webServer.handleClient();
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
 }
 
 //////// utils functions
@@ -410,8 +269,6 @@ void readSensorsToStrings()
         }
     }
 }
-
-
 
 void handleRootPage()
 {

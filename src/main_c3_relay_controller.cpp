@@ -108,7 +108,7 @@ void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the m
 void taskReadBME280(void *pvParameters);
 void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
 void taskRelay(void *pvParameters);
-void tcpServerTask(void *pvParameters); // direct connection
+void taskTcpServer(void *pvParameters); // direct connection
 
 void taskBLE(void *pvParameters);
 bool connectToMqttBroker();
@@ -211,7 +211,7 @@ void setup()
     Serial.println("BLE initialized, advertising...");
     xTaskCreate(taskBLE, "taskBLE", 4096, NULL, 1, NULL);
 #endif
-    xTaskCreate(tcpServerTask, "tcpServerTask", 4096, NULL, 1, NULL);
+    xTaskCreate(taskTcpServer, "taskTcpServer", 4096, NULL, 1, NULL);
 
     // monitoring tasks
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
@@ -326,7 +326,7 @@ void taskReadBME280(void *pvParameters)
 }
 
 // direct tcp
-void tcpServerTask(void *pvParameters)
+void taskTcpServer(void *pvParameters)
 {
     WiFiServer server(80); // http
     server.begin();

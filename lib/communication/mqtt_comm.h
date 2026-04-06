@@ -5,9 +5,9 @@
 
 namespace communication
 {
-    QueueHandle_t mqttQueue;
-    QueueHandle_t relayQueue;
-    QueueHandle_t webQueue;
+    extern QueueHandle_t mqttQueue;
+    extern QueueHandle_t relayQueue;
+    extern QueueHandle_t webQueue;
 
     struct RelayCommand
     {
@@ -109,10 +109,5 @@ namespace communication
         char msgType[12];
     };
 
-    void initQueue()
-    {
-        mqttQueue = xQueueCreate(200, sizeof(MqttMessage));
-        relayQueue = xQueueCreate(2, sizeof(RelayCommand));
-        webQueue = xQueueCreate(12, sizeof(WebMessage));
-    }
+    void initQueue();
 }

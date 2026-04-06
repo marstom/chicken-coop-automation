@@ -3,15 +3,17 @@
 
 // Define UUIDs for your service and characteristics
 // Replace these with your actual UUIDs
-const char* serviceUUID = "12345678-1234-1234-1234-123456789ABC";
-const char* dataCharacteristicUUID = "12345678-1234-1234-1234-123456789ABD";
+const char *serviceUUID = "12345678-1234-1234-1234-123456789ABC";
+const char *dataCharacteristicUUID = "12345678-1234-1234-1234-123456789ABD";
 
 BLEService dataService(serviceUUID);
 BLEStringCharacteristic dataCharacteristic(dataCharacteristicUUID, BLERead | BLEWrite, 20); // 20 bytes max
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
-  while (!BLE.begin()) {
+  while (!BLE.begin())
+  {
     Serial.println("Starting BLE failed!");
     delay(1000);
   }
@@ -29,17 +31,21 @@ void setup() {
   Serial.println("ESP32-S3 advertising as a BLE server!");
 }
 
-void loop() {
+void loop()
+{
   // Your main loop logic
   BLEDevice central = BLE.central(); // Check for central connections
 
-  if (central) {
+  if (central)
+  {
     Serial.print("Connected to: ");
     Serial.println(central.address());
 
-    while (central.connected()) {
+    while (central.connected())
+    {
       // You can read/write characteristics here
-      if (dataCharacteristic.written()) {
+      if (dataCharacteristic.written())
+      {
         String receivedValue = dataCharacteristic.value();
         Serial.print("Received: ");
         Serial.println(receivedValue);
