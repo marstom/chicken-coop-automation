@@ -22,3 +22,7 @@ pio test -e native -v
 ```
 
 
+## Here is docker for rabbit for raspberry pi
+
+https://medium.com/@mahmud.ibrahim021/set-up-rabbitmq-with-mqtt-and-management-ui-using-docker-179cb96c1e87
+

@@ -26,6 +26,18 @@ build_flags =
 #ifndef WIFI_PASS
   #define WIFI_PASS "unset"
 #endif
+#ifndef MQTT_HOST
+  #define MQTT_HOST "raspberrypi.local"
+#endif
+#ifndef MQTT_PORT
+  #define MQTT_PORT 1883
+#endif
+#ifndef MQTT_USER
+  #define MQTT_USER "admin"
+#endif
+#ifndef MQTT_PASS
+  #define MQTT_PASS "admin"
+#endif
 
 
 /// Alternative - namespace

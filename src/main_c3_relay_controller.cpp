@@ -69,8 +69,9 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #define SEALEVELPRESSURE_HPA (1013.25)
 Adafruit_BME280 bme; // I2C
 
-// My rasberry pi server name
-const char *host = "raspberrypi.local";
+// MQTT broker settings
+const char *host = MQTT_HOST;
+const uint16_t mqttPort = MQTT_PORT;
 WiFiClient net;
 PubSubClient client(net);
 
@@ -110,6 +111,7 @@ void taskRelay(void *pvParameters);
 void tcpServerTask(void *pvParameters); // direct connection
 
 void taskBLE(void *pvParameters);
+bool connectToMqttBroker();
 
 void setup()
 {
@@ -123,14 +125,14 @@ void setup()
     pinMode(RELAY_PIN, OUTPUT); // RELAY_PIN as output
     digitalWrite(RELAY_PIN, HIGH);
 
-    client.setServer(host, 1883); // rpi server
+    client.setServer(host, mqttPort);
     client.setCallback(mycallback);
 
     while (!client.connected())
     {
-        if (client.connect(THINGNAME))
+        if (connectToMqttBroker())
         {
-            debug_tools::logMessage("☑ Connected to RPI Broker!");
+            debug_tools::logMessage("☑ Connected to MQTT broker!");
             // Subscriptions here
             client.subscribe(RELAY_1_SET_TOPIC);
             ////////////
@@ -259,6 +261,16 @@ void taskRelay(void *pv)
         }
         // vTaskDelay(pdMS_TO_TICKS(100));
     }
+}
+
+bool connectToMqttBroker()
+{
+    if (MQTT_USER[0] != '\0')
+    {
+        return client.connect(THINGNAME, MQTT_USER, MQTT_PASS);
+    }
+
+    return client.connect(THINGNAME);
 }
 
 void mycallback(char *topic, byte *message, unsigned int length)

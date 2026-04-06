@@ -39,3 +39,9 @@ T-Mobile-Tom-5G
 # MQTT setup
 ...
 
+Steps:
+- Go to raspberry
+- cd services, docker compose up, then enable mqtt plugin using ./enable_mqtt_plugin;
+- Now dashboard is available http://raspberrypi.local:15672/#/, creds are: admin admin.
+
+- Topics 
