@@ -17,6 +17,8 @@
 
 #define I2C_SDA D4
 #define I2C_SCL D5
+#define AMONIA_SENSOR_PIN A0
+#define AMONIA_SENSOR_READ_INTERVAL_MS 1000
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
@@ -30,6 +32,7 @@
 #define BME_PRESSURE_TOPIC PREFIX "bme280/pressure"
 #define BME_HUMIDITY_TOPIC PREFIX "bme280/humidity"
 #define BME_ALTITUDE_TOPIC PREFIX "bme280/altitude"
+#define AMONIA_SENSOR_TOPIC PREFIX "amonia/raw"
 #define MQTT_LOG_TOPIC PREFIX "log/mydebug"
 #define STATUS_TOPIC PREFIX "status/read"
 #define RELAY_1_SET_TOPIC PREFIX "relay/1/set"

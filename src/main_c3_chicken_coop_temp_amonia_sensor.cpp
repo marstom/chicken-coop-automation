@@ -59,7 +59,7 @@ void setup()
     {
     } // wait a moment for usb
     WiFi.onEvent(onWiFiEvent);
-    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "coop-automation"); // TODO later change to garden
+    my::connect_to_wifi_with_wait(SSID_GARDEN, WIFI_PASS, "coop-automation"); // TODO later change to garden SSID_OFFICE SSID_GARDEN
     delay(1000);
     setupMDNS(MDNS_HOSTNAME);
     Serial.print("Adres to: http://");
@@ -117,7 +117,7 @@ void setup()
     xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
     xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
     xTaskCreate(taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
-// xTaskCreate(taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
+    xTaskCreate(taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
 // monitoring tasks
 #ifdef ENABLE_MONITORING
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask); // task monitor
@@ -149,4 +149,3 @@ void mycallback(char *topic, byte *message, unsigned int length)
 }
 
 //////// utils functions
-

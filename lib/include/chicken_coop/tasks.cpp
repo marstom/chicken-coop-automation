@@ -82,6 +82,27 @@ void taskReadBME280(void *pvParameters)
     }
 }
 
+void taskAmoniaSensor(void *pvParameters){
+    esp_task_wdt_add(NULL);
+
+    char buf[16];
+    communication::MqttMessage msg;
+
+    pinMode(AMONIA_SENSOR_PIN, INPUT);
+
+    for (;;)
+    {
+        const int raw = analogRead(AMONIA_SENSOR_PIN);
+        snprintf(buf, sizeof(buf), "%d", raw);
+        msg.setContent(AMONIA_SENSOR_TOPIC, buf);
+        msg.sendToQueue();
+
+        esp_task_wdt_reset();
+        vTaskDelay(pdMS_TO_TICKS(AMONIA_SENSOR_READ_INTERVAL_MS));
+    }
+}
+
+
 // --- New task: device monitoring, for troubleshooting ---
 void taskStackMonitor(void *pvParameters)
 {
