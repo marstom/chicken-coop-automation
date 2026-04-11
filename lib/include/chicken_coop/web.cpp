@@ -3,9 +3,11 @@
 
 #include "chicken_coop/web.h"
 #include "chicken_coop/constants.h"
-#include "chicken_coop/web.h"
 #include "mqtt_comm.h"
 #include "chicken_coop/gauge_page_chicken_coop.h"
+
+namespace chicken_coop
+{
 
 WebServer webServer(80);
 WiFiClient net;
@@ -130,4 +132,4 @@ void handleJsonAPI()
     webServer.send(200, "application/json", json);
 }
 
-
+} // namespace chicken_coop

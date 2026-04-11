@@ -58,25 +58,25 @@ void setup()
     while (!Serial && millis() < 3000)
     {
     } // wait a moment for usb
-    WiFi.onEvent(onWiFiEvent);
+    WiFi.onEvent(chicken_coop::onWiFiEvent);
     my::connect_to_wifi_with_wait(SSID_GARDEN, WIFI_PASS, "coop-automation"); // TODO later change to garden SSID_OFFICE SSID_GARDEN
     delay(1000);
-    setupMDNS(MDNS_HOSTNAME);
+    chicken_coop::setupMDNS(MDNS_HOSTNAME);
     Serial.print("Adres to: http://");
     Serial.print(MDNS_HOSTNAME);
     Serial.println(".local");
     debug_tools::logPrefix = PREFIX;
 
-    client.setServer(host, mqttPort);
-    client.setCallback(mycallback);
+    chicken_coop::client.setServer(host, mqttPort);
+    chicken_coop::client.setCallback(mycallback);
 
-    while (!client.connected())
+    while (!chicken_coop::client.connected())
     {
-        if (connectToMqttBroker())
+        if (chicken_coop::connectToMqttBroker())
         {
             debug_tools::logMessage("☑ Connected to MQTT broker!");
             // Subscriptions here
-            client.subscribe(RELAY_1_SET_TOPIC);
+            chicken_coop::client.subscribe(RELAY_1_SET_TOPIC);
             ////////////
             communication::MqttMessage msg;
             msg.setContent(STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
@@ -85,7 +85,7 @@ void setup()
         else
         {
             debug_tools::logMessage("✖ Failed to connect, try again in 2 seconds, rc=");
-            debug_tools::logMessage("%d", client.state());
+            debug_tools::logMessage("%d", chicken_coop::client.state());
             delay(2000);
         }
     }
@@ -109,15 +109,15 @@ void setup()
                  { debug_tools::logMessage("Error[%u]: ", error); });
 
     ArduinoOTA.begin();
-    simpleWebPage(); // run server with web page at 80
+    chicken_coop::simpleWebPage(); // run server with web page at 80
     Serial.println("WebServer started");
     communication::initQueue();
 
     // main mqtt task
-    xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
-    xTaskCreate(taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
-    xTaskCreate(taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
-    xTaskCreate(taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
+    xTaskCreatePinnedToCore(chicken_coop::taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
+    xTaskCreate(chicken_coop::taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
+    xTaskCreate(chicken_coop::taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
+    xTaskCreate(chicken_coop::taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
 // monitoring tasks
 #ifdef ENABLE_MONITORING
     xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask); // task monitor

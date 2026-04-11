@@ -9,7 +9,10 @@
 #include "chicken_coop/protocols.h"
 #include "secrets.h"
 
-PubSubClient client(net);
+namespace chicken_coop
+{
+
+PubSubClient client(chicken_coop::net);
 
 // MQTT loop task
 void taskMQTT(void *pvParameters)
@@ -27,7 +30,7 @@ void taskMQTT(void *pvParameters)
                 if (now - lastReconnectAttempt >= pdMS_TO_TICKS(2000))
                 {
                     lastReconnectAttempt = now;
-                    if (connectToMqttBroker())
+                    if (chicken_coop::connectToMqttBroker())
                     {
                         client.subscribe(RELAY_1_SET_TOPIC);
                         debug_tools::logMessage("MQTT reconnected");
@@ -144,7 +147,7 @@ void taskWebServer(void *pvParameters)
 {
     for (;;)
     {
-        webServer.handleClient();
+        chicken_coop::webServer.handleClient();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
@@ -157,4 +160,5 @@ bool connectToMqttBroker()
     }
 
     return client.connect(THINGNAME);
+}
 }
