@@ -1,6 +1,7 @@
 #include <mqtt_comm.h>
 #include <esp_task_wdt.h>
 #include <Wire.h>
+#include <WiFi.h>
 #include <debug_tools.h>
 
 #include "chicken_coop/tasks.h"
@@ -14,9 +15,31 @@ PubSubClient client(net);
 void taskMQTT(void *pvParameters)
 {
     esp_task_wdt_add(NULL); // watchdog
+    TickType_t lastReconnectAttempt = 0;
+
     for (;;)
     {
-        client.loop(); // <--- processes incoming MQTT messages
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            if (!client.connected())
+            {
+                const TickType_t now = xTaskGetTickCount();
+                if (now - lastReconnectAttempt >= pdMS_TO_TICKS(2000))
+                {
+                    lastReconnectAttempt = now;
+                    if (connectToMqttBroker())
+                    {
+                        client.subscribe(RELAY_1_SET_TOPIC);
+                        debug_tools::logMessage("MQTT reconnected");
+                    }
+                }
+            }
+            else
+            {
+                client.loop(); // <--- processes incoming MQTT messages
+            }
+        }
+
         communication::MqttMessage msg;
         if (xQueueReceive(communication::mqttQueue, &msg, 0))
         {

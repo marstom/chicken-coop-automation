@@ -55,7 +55,8 @@ void onWiFiEvent(WiFiEvent_t event)
         setupMDNS(MDNS_HOSTNAME);
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        Serial.println("WiFi disconnected, waiting for reconnect...");
+        Serial.println("WiFi disconnected. Try reconnect again...");
+        WiFi.reconnect();
         break;
     default:
         break;
@@ -128,6 +129,5 @@ void handleJsonAPI()
 
     webServer.send(200, "application/json", json);
 }
-
 
 
