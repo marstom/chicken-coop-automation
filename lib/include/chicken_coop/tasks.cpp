@@ -9,6 +9,9 @@
 #include "chicken_coop/protocols.h"
 #include "secrets.h"
 
+extern TaskHandle_t hMQTTTask;
+extern TaskHandle_t hBME280Task;
+
 namespace chicken_coop
 {
 
@@ -60,7 +63,7 @@ void taskReadBME280(void *pvParameters)
     esp_task_wdt_add(NULL);
 
     char buf[16];
-    Wire.begin(D4, D5); // 6 7
+    Wire.begin(I2C_SDA, I2C_SCL); // 6 7
     communication::MqttMessage msg;
     communication::WebMessage webMsg;
 
@@ -134,11 +137,12 @@ void taskStackMonitor(void *pvParameters)
 {
     for (;;)
     {
-#ifdef ENABLE_MONITORING
-        debug_tools::printStackInfo("MQTTTask", hMQTTTask);
-        debug_tools::printStackInfo("BME280Task", hBME280Task);
-        debug_tools::printHeap(); // DEBUG memory leaks
-#endif
+        if constexpr (ENABLE_MONITORING)
+        {
+            debug_tools::printStackInfo("MQTTTask", ::hMQTTTask);
+            debug_tools::printStackInfo("BME280Task", ::hBME280Task);
+            debug_tools::printHeap(); // DEBUG memory leaks
+        }
         vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
     }
 }

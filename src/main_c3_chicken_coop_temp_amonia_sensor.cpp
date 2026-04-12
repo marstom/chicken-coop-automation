@@ -59,13 +59,13 @@ void setup()
     {
     } // wait a moment for usb
     WiFi.onEvent(chicken_coop::onWiFiEvent);
-    my::connect_to_wifi_with_wait(SSID_GARDEN, WIFI_PASS, "coop-automation"); // TODO later change to garden SSID_OFFICE SSID_GARDEN
+    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "coop-automation"); // TODO later change to garden SSID_OFFICE SSID_GARDEN
     delay(1000);
-    chicken_coop::setupMDNS(MDNS_HOSTNAME);
+    chicken_coop::setupMDNS(chicken_coop::MDNS_HOSTNAME);
     Serial.print("Adres to: http://");
-    Serial.print(MDNS_HOSTNAME);
+    Serial.print(chicken_coop::MDNS_HOSTNAME);
     Serial.println(".local");
-    debug_tools::logPrefix = PREFIX;
+    debug_tools::logPrefix = chicken_coop::PREFIX;
 
     chicken_coop::client.setServer(host, mqttPort);
     chicken_coop::client.setCallback(mycallback);
@@ -76,10 +76,10 @@ void setup()
         {
             debug_tools::logMessage("☑ Connected to MQTT broker!");
             // Subscriptions here
-            chicken_coop::client.subscribe(RELAY_1_SET_TOPIC);
+            chicken_coop::client.subscribe(chicken_coop::RELAY_1_SET_TOPIC);
             ////////////
             communication::MqttMessage msg;
-            msg.setContent(STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
+            msg.setContent(chicken_coop::STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
             msg.sendToQueue();
         }
         else
@@ -91,7 +91,7 @@ void setup()
     }
 
     debug_tools::logMessage("Initialize watchdog");
-    esp_task_wdt_init(WDT_TIMEOUT, true);
+    esp_task_wdt_init(chicken_coop::WDT_TIMEOUT, true);
 
     // Init wireless updates
     debug_tools::logMessage("Initialize OTA updates via Wireless");
@@ -118,10 +118,11 @@ void setup()
     xTaskCreate(chicken_coop::taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
     xTaskCreate(chicken_coop::taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
     xTaskCreate(chicken_coop::taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
-// monitoring tasks
-#ifdef ENABLE_MONITORING
-    xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask); // task monitor
-#endif
+    // monitoring tasks
+    if constexpr (chicken_coop::ENABLE_MONITORING)
+    {
+        xTaskCreate(chicken_coop::taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask); // task monitor
+    }
     debug_tools::logMessage("Tasks created, watchdog armed!");
 }
 
