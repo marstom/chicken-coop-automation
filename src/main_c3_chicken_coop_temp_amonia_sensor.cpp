@@ -136,8 +136,15 @@ void loop()
 
 ///////////////////// Tasks
 
+
+// callback triggers when a message is received
+// Triggers on topic: "coop/relay/1/set"
+// because it subscribes RELAY_1_SET_TOPIC
 void mycallback(char *topic, byte *message, unsigned int length)
 {
+
+    Serial.println("MQTT Message arrived");
+    Serial.println("Message arrived to MQTT topic: " + String(topic));
     String msgTemp = "";
     for (unsigned int i = 0; i < length; i++)
     {

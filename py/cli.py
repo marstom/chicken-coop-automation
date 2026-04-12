@@ -1,6 +1,8 @@
 #! python
 
 
+import time
+
 import typer
 from zeroconf import Zeroconf, ServiceBrowser, ServiceInfo
 import socket
@@ -154,6 +156,31 @@ def sub(
         raise typer.Exit(code=1)
 
     client.loop_forever()
+
+
+@cli.command()
+def mqtt_send():
+    """
+    Send message to a topic
+    """
+
+    # file: send_mqtt.py
+    import paho.mqtt.client as mqtt
+
+    BROKER = "raspberrypi.local"
+    # BROKER = "192.168.0.103"
+    PORT = 1883
+    TOPIC = "coop/relay/1/set"
+    MESSAGE = "Hello world"
+
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.username_pw_set("admin", "admin")
+    client.connect(BROKER, PORT, 60)
+    client.publish(TOPIC, MESSAGE)
+    client.disconnect()
+    print("Sent")
+
+
 
 
 if __name__ == "__main__":
