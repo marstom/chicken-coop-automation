@@ -59,7 +59,7 @@ void setup()
     {
     } // wait a moment for usb
     WiFi.onEvent(chicken_coop::onWiFiEvent);
-    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "coop-automation"); // TODO later change to garden SSID_OFFICE SSID_GARDEN
+    my::connect_to_wifi_with_wait(SSID_GARDEN, WIFI_PASS, "coop-automation"); // TODO later change to garden SSID_OFFICE SSID_GARDEN
     delay(1000);
     chicken_coop::setupMDNS(chicken_coop::MDNS_HOSTNAME);
     Serial.print("Adres to: http://");
