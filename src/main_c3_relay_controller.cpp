@@ -29,46 +29,14 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include "debug_tools.h"
 #include "secrets.h"
 
-// Hardware feature toggle, comment out hardware which you don't need
-#define DEVICE_RELAY_ENABLED // enable relay controll
-#define BLE_ENABLED          // enable ble communication
-// #define ENABLE_MONITORING
-#define WDT_TIMEOUT 30
-
-#define RELAY_PIN D0
-
-// MQTT stuff
-#define THINGNAME "esp32-c3-basement-fhs232y3a43"
-#define PREFIX "basement/"
-#define MQTT_LOG_TOPIC PREFIX "log/mydebug"
-#define STATUS_TOPIC PREFIX "status/read"
-#define RELAY_1_SET_TOPIC PREFIX "relay/1/set"
-
-// #define I2C_SDA D4
-// #define I2C_SCL D5
+#include "relay_controller/constants.h"
+#include "relay_controller/tasks.h"
 
 // MQTT broker settings
 const char *host = MQTT_HOST;
 const uint16_t mqttPort = MQTT_PORT;
-WiFiClient net;
-PubSubClient client(net);
 
-// ------------- BLE support -------------
-// UUIDs
-const char *deviceServiceUuid = "19b10000-e8f2-537e-4f6c-d104768a1214";
-const char *deviceServiceRequestCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1214";
-const char *deviceServiceResponseCharacteristicUuid = "19b10002-e8f2-537e-4f6c-d104768a1214";
-
-// GATT objects
-BLEService deviceService(deviceServiceUuid);
-
-// phone writes
-BLEStringCharacteristic deviceRequestCharacteristic(deviceServiceRequestCharacteristicUuid, BLEWrite, 32);
-// phone reads / notify phone
-BLEStringCharacteristic deviceResponseCharacteristic(deviceServiceResponseCharacteristicUuid, BLERead | BLENotify, 32);
-
-BLEDescriptor reqName("2901", "Phone → ESP request");
-BLEDescriptor respName("2901", "ESP → Phone response");
+// PubSubClient client(net);
 
 // --- Task handles (needed for stack monitoring) ---
 TaskHandle_t hMQTTTask = NULL;
@@ -78,13 +46,8 @@ TaskHandle_t hRelayTask = NULL;
 
 /// make mqtt thread safe
 void mycallback(char *topic, byte *message, unsigned int length);
-void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the messages!
-// void taskReadBME280(void *pvParameters);
-void taskStackMonitor(void *pvParameters); // debug stack monitor for memory usage
-void taskRelay(void *pvParameters);
-void taskTcpServer(void *pvParameters); // direct connection
 
-void taskBLE(void *pvParameters);
+// void taskBLE(void *pvParameters);
 bool connectToMqttBroker();
 
 void setup()
@@ -99,16 +62,16 @@ void setup()
     pinMode(RELAY_PIN, OUTPUT); // RELAY_PIN as output
     digitalWrite(RELAY_PIN, HIGH);
 
-    client.setServer(host, mqttPort);
-    client.setCallback(mycallback);
+    relay_controller::client.setServer(host, mqttPort);
+    relay_controller::client.setCallback(mycallback);
 
-    while (!client.connected())
+    while (!relay_controller::client.connected())
     {
         if (connectToMqttBroker())
         {
             debug_tools::logMessage("☑ Connected to MQTT broker!");
             // Subscriptions here
-            client.subscribe(RELAY_1_SET_TOPIC);
+            relay_controller::client.subscribe(RELAY_1_SET_TOPIC);
             ////////////
             communication::MqttMessage msg;
             msg.setContent(STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
@@ -117,7 +80,7 @@ void setup()
         else
         {
             debug_tools::logMessage("✖ Failed to connect, try again in 2 seconds, rc=");
-            debug_tools::logMessage("%d", client.state());
+            debug_tools::logMessage("%d", relay_controller::client.state());
             delay(2000);
         }
     }
@@ -142,10 +105,10 @@ void setup()
     ArduinoOTA.begin();
     communication::initQueue();
     // main mqtt task
-    xTaskCreatePinnedToCore(taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
+    xTaskCreatePinnedToCore(relay_controller::taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
 // hardware sensors tasks
 #ifdef DEVICE_RELAY_ENABLED
-    xTaskCreate(taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
+    xTaskCreate(relay_controller::taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
 #endif
 #ifdef BLE_ENABLED
     // 1) MUST start BLE before using any other BLE APIs
@@ -160,26 +123,26 @@ void setup()
     BLE.setDeviceName("tomeksEspDeviceName");
 
     // build GATT
-    deviceService.addCharacteristic(deviceRequestCharacteristic);
-    deviceService.addCharacteristic(deviceResponseCharacteristic);
+    relay_controller::deviceService.addCharacteristic(relay_controller::deviceRequestCharacteristic);
+    relay_controller::deviceService.addCharacteristic(relay_controller::deviceResponseCharacteristic);
 
     // add descriptors
-    deviceRequestCharacteristic.addDescriptor(reqName);
-    deviceResponseCharacteristic.addDescriptor(respName);
+    relay_controller::deviceRequestCharacteristic.addDescriptor(relay_controller::reqName);
+    relay_controller::deviceResponseCharacteristic.addDescriptor(relay_controller::respName);
 
-    deviceResponseCharacteristic.setValue(""); // initial value
+    relay_controller::deviceResponseCharacteristic.setValue(""); // initial value
 
-    BLE.setAdvertisedService(deviceService);
-    BLE.addService(deviceService);
+    BLE.setAdvertisedService(relay_controller::deviceService);
+    BLE.addService(relay_controller::deviceService);
     BLE.advertise();
 
     Serial.println("BLE initialized, advertising...");
-    xTaskCreate(taskBLE, "taskBLE", 4096, NULL, 1, NULL);
+    xTaskCreate(relay_controller::taskBLE, "taskBLE", 4096, NULL, 1, NULL);
 #endif
-    xTaskCreate(taskTcpServer, "taskTcpServer", 4096, NULL, 1, NULL);
+    xTaskCreate(relay_controller::taskTcpServer, "taskTcpServer", 4096, NULL, 1, NULL);
 
     // monitoring tasks
-    xTaskCreate(taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
+    xTaskCreate(relay_controller::taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
     debug_tools::logMessage("Tasks created, watchdog armed!");
 }
 
@@ -189,52 +152,16 @@ void loop()
     ArduinoOTA.handle();
 }
 
-// MQTT loop task
-void taskMQTT(void *pvParameters)
-{
-    esp_task_wdt_add(NULL);
-    for (;;)
-    {
-        client.loop(); // <--- processes incoming MQTT messages
-        communication::MqttMessage msg;
-        if (xQueueReceive(communication::mqttQueue, &msg, 0))
-        {
-            client.publish(msg.topic, msg.payload);
-        }
-        esp_task_wdt_reset();
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-}
 
-void taskRelay(void *pv)
-{
-    communication::RelayCommand cmd;
-    for (;;)
-    {
-        if (xQueueReceive(communication::relayQueue, &cmd, portMAX_DELAY))
-        {
-            if (cmd.on)
-            {
-                digitalWrite(RELAY_PIN, LOW);
-                vTaskDelay(pdMS_TO_TICKS(6000));
-                digitalWrite(RELAY_PIN, HIGH);
-            }
-            else
-            {
-                digitalWrite(RELAY_PIN, HIGH);
-            }
-        }
-    }
-}
 
 bool connectToMqttBroker()
 {
     if (MQTT_USER[0] != '\0')
     {
-        return client.connect(THINGNAME, MQTT_USER, MQTT_PASS);
+        return relay_controller::client.connect(THINGNAME, MQTT_USER, MQTT_PASS);
     }
 
-    return client.connect(THINGNAME);
+    return relay_controller::client.connect(THINGNAME);
 }
 
 void mycallback(char *topic, byte *message, unsigned int length)
@@ -248,96 +175,4 @@ void mycallback(char *topic, byte *message, unsigned int length)
     communication::RelayCommand cmd;
     cmd.on = (msgTemp == "ON");
     xQueueSend(communication::relayQueue, &cmd, 0); // queue is thread safe
-}
-
-// direct tcp
-void taskTcpServer(void *pvParameters)
-{
-    WiFiServer server(80); // http
-    server.begin();
-
-    for (;;)
-    {
-        WiFiClient client = server.available();
-        if (client)
-        {
-            esp_task_wdt_add(NULL);
-            String req = client.readStringUntil('\n');
-            Serial.println(req);
-
-            // on receive GET requeset
-            digitalWrite(RELAY_PIN, LOW);
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-Type: text/plain");
-            client.println("Connection: close");
-            client.println("");
-            client.println("Open, closing in 6s...");
-            client.stop();
-            vTaskDelay(pdMS_TO_TICKS(6000));
-            digitalWrite(RELAY_PIN, HIGH);
-            esp_task_wdt_reset();
-        }
-        vTaskDelay(pdMS_TO_TICKS(250)); // yield
-    }
-}
-
-void taskBLE(void *pvParameters)
-{
-    Serial.println("Starting BLE work!");
-    while (1)
-    {
-        BLEDevice central = BLE.central();
-        if (central)
-        {
-            // poll BLE radio events and handle them
-            while (central.connected())
-            {
-                BLE.poll();
-
-                if (deviceRequestCharacteristic.written())
-                {
-                    String receivedData = deviceRequestCharacteristic.value();
-                    String pass = "paulina";
-                    Serial.println("RCV data:" + receivedData);
-                    Serial.println(receivedData == pass);
-                    if (receivedData == pass)
-                    {
-                        Serial.println("OPEN BLE");
-                        String resp = "Status: The door has been opened!";
-                        deviceResponseCharacteristic.setValue(resp);
-                        digitalWrite(RELAY_PIN, LOW);
-                        vTaskDelay(pdMS_TO_TICKS(6000));
-                        digitalWrite(RELAY_PIN, HIGH);
-                    }
-                    else
-                    {
-                        Serial.println("DENY BLE");
-                        // Send notification back
-                        String resp = "Status: acces denied...";
-                        deviceResponseCharacteristic.setValue(resp);
-                        digitalWrite(RELAY_PIN, HIGH);
-                    }
-                }
-                vTaskDelay(pdMS_TO_TICKS(10));
-            }
-
-            Serial.println("Disconnected");
-        }
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
-
-// --- New task: device monitoring, for troubleshooting ---
-void taskStackMonitor(void *pvParameters)
-{
-    for (;;)
-    {
-#ifdef ENABLE_MONITORING
-        debug_tools::printStackInfo("MQTTTask", hMQTTTask);
-        debug_tools::printStackInfo("BME280Task", hBME280Task);
-        debug_tools::printStackInfo("RelayTask", hRelayTask);
-        debug_tools::printHeap(); // DEBUG memory leaks
-#endif
-        vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
-    }
 }
