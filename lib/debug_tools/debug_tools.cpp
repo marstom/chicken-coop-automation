@@ -1,22 +1,43 @@
 #include "debug_tools.h"
 
+#include <cstdarg>
+#include <cstdio>
+
 namespace debug_tools{
 
 String logPrefix = "";
 
-void logMessage(const char *fmt, ...)
+static void logFormattedMessage(const LogOptions &options, const char *fmt, va_list args)
 {
     char buf[256];
+    vsnprintf(buf, sizeof(buf), fmt, args);
+
+    if (options.printToSerial) {
+        Serial.println(buf);
+    }
+
+    if (options.logToMqtt) {
+        communication::MqttMessage msg;
+        String topic = logPrefix + "log/mydebug";
+        msg.setContent(topic.c_str(), buf);
+        msg.sendToQueue();
+    }
+}
+
+void logMessage(const char *fmt, ...)
+{
     va_list args;
     va_start(args, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, args);
+    logFormattedMessage(LogOptions{}, fmt, args);
     va_end(args);
+}
 
-    Serial.println(buf); // local USB log
-    communication::MqttMessage msg;
-    String topic = logPrefix + "log/mydebug";
-    msg.setContent(topic.c_str(), buf);
-    msg.sendToQueue();
+void logMessage(const LogOptions &options, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    logFormattedMessage(options, fmt, args);
+    va_end(args);
 }
 
 void printStackInfo(const char *taskName, TaskHandle_t mqttTaskHandler)

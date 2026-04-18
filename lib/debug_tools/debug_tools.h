@@ -7,7 +7,13 @@
 namespace debug_tools{
 extern String logPrefix;
 
+struct LogOptions {
+    bool printToSerial = true;
+    bool logToMqtt = true;
+};
+
 void logMessage(const char *fmt, ...);
+void logMessage(const LogOptions &options, const char *fmt, ...);
 void printStackInfo(const char *taskName, TaskHandle_t mqttTaskHandler);
 void printHeap();
 

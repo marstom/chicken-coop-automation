@@ -181,7 +181,43 @@ def mqtt_send():
     print("Sent")
 
 
+@cli.command()
+def coop_receive_temperature():
+    import paho.mqtt.client as mqtt
 
+    BROKER = "raspberrypi.local"
+    # BROKER = "192.168.0.103"
+    PORT = 1883
+    TOPIC = "coop/bme280/temperature"
+
+    def on_message(client, userdata, msg):
+        print(f"[{msg.topic}] {msg.payload.decode()}")
+
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.username_pw_set("admin", "admin")
+    client.connect(BROKER, PORT, 60)
+    client.subscribe(TOPIC)
+    client.on_message = on_message
+    client.loop_forever()
+
+@cli.command()
+def receive_debug_logs():
+    import paho.mqtt.client as mqtt
+
+    BROKER = "raspberrypi.local"
+    # BROKER = "192.168.0.103"
+    PORT = 1883
+    TOPIC = "coop/log/mydebug"
+
+    def on_message(client, userdata, msg):
+        print(f"[{msg.topic}] {msg.payload.decode()}")
+
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.username_pw_set("admin", "admin")
+    client.connect(BROKER, PORT, 60)
+    client.subscribe(TOPIC)
+    client.on_message = on_message
+    client.loop_forever()
 
 if __name__ == "__main__":
     cli()
