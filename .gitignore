@@ -9,3 +9,5 @@ secret.ini
 .DS_Store
 
 site/
+
+*.db

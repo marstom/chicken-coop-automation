@@ -223,6 +223,7 @@ def receive_debug_logs(topic: str = "coop/log/mydebug"):
 
 @cli.command()
 def receive_mqtt_async(topic: str = "coop/log/mydebug"):
+    """The lib : https://github.com/empicano/aiomqtt/blob/main/docs/guides.md"""
     async def main():
         async with aiomqtt.Client("raspberrypi.local", username="admin", password="admin") as client:
             await client.subscribe(topic)
