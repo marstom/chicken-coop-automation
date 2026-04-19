@@ -6,21 +6,8 @@
 namespace debug_tools{
 
 String logPrefix = "";
+LogOptions logOptions;
 
-/*
-Usage
-
-debug_tools::LogOptions{.printToSerial = false, .logToMqtt = true}
-
----
-debug_tools::LogOptions opts;
-opts.printToSerial = false;
-opts.logToMqtt = true;
-
-debug_tools::logMessage(opts, "MQTT only: %d", value);
-
-
-*/
 static void logFormattedMessage(const LogOptions &options, const char *fmt, va_list args)
 {
     char buf[256];
@@ -42,7 +29,10 @@ void logMessage(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    logFormattedMessage(LogOptions{}, fmt, args);
+    // LogOptions logOptions;
+    // logOptions.printToSerial = true;
+    // logOptions.logToMqtt = true;
+    logFormattedMessage(logOptions, fmt, args);
     va_end(args);
 }
 

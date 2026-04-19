@@ -78,6 +78,7 @@ void taskReadBME280(void *pvParameters)
     for (;;)
     {
         snprintf(buf, sizeof(buf), "%.2f", bme.readTemperature());
+        debug_tools::logMessage("This is the buf content: %s", buf);
         Serial.println(buf);
         msg.setContent(BME_TEMPERATURE_TOPIC, buf);
         msg.sendToQueue();

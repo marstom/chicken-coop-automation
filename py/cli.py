@@ -7,6 +7,8 @@ import typer
 from zeroconf import Zeroconf, ServiceBrowser, ServiceInfo
 import socket
 import netifaces
+import asyncio
+import aiomqtt
 
 cli = typer.Typer()
 
@@ -201,13 +203,12 @@ def coop_receive_temperature():
     client.loop_forever()
 
 @cli.command()
-def receive_debug_logs():
+def receive_debug_logs(topic: str = "coop/log/mydebug"):
+    """ Debug tools """
     import paho.mqtt.client as mqtt
 
     BROKER = "raspberrypi.local"
-    # BROKER = "192.168.0.103"
     PORT = 1883
-    TOPIC = "coop/log/mydebug"
 
     def on_message(client, userdata, msg):
         print(f"[{msg.topic}] {msg.payload.decode()}")
@@ -215,9 +216,37 @@ def receive_debug_logs():
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.username_pw_set("admin", "admin")
     client.connect(BROKER, PORT, 60)
-    client.subscribe(TOPIC)
+    client.subscribe(topic)
     client.on_message = on_message
     client.loop_forever()
+
+
+@cli.command()
+def receive_mqtt_async(topic: str = "coop/log/mydebug"):
+    async def main():
+        async with aiomqtt.Client("raspberrypi.local", username="admin", password="admin") as client:
+            await client.subscribe(topic)
+            async for message in client.messages:
+                print(f"[{message.topic}] {message.payload.decode()}")
+
+    asyncio.run(main())
+
+def topics():
+    """
+        // MQTT stuff.
+    inline constexpr const char *MDNS_HOSTNAME = "chicken";
+    inline constexpr const char *THINGNAME = "esp32-c3-coop-temp-amonia-sensor";
+    inline constexpr const char *PREFIX = "coop/";
+    inline constexpr const char *BME_TEMPERATURE_TOPIC = "coop/bme280/temperature";
+    inline constexpr const char *BME_PRESSURE_TOPIC = "coop/bme280/pressure";
+    inline constexpr const char *BME_HUMIDITY_TOPIC = "coop/bme280/humidity";
+    inline constexpr const char *BME_ALTITUDE_TOPIC = "coop/bme280/altitude";
+    inline constexpr const char *AMONIA_SENSOR_TOPIC = "coop/amonia/raw";
+    inline constexpr const char *MQTT_LOG_TOPIC = "coop/log/mydebug";
+    inline constexpr const char *STATUS_TOPIC = "coop/status/read";
+    inline constexpr const char *RELAY_1_SET_TOPIC = "coop/relay/1/set";
+    
+    """
 
 if __name__ == "__main__":
     cli()

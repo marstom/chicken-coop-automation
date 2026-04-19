@@ -12,6 +12,8 @@ struct LogOptions {
     bool logToMqtt = true;
 };
 
+extern LogOptions logOptions;
+
 void logMessage(const char *fmt, ...);
 void logMessage(const LogOptions &options, const char *fmt, ...);
 void printStackInfo(const char *taskName, TaskHandle_t mqttTaskHandler);

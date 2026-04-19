@@ -49,12 +49,20 @@ TaskHandle_t hBME280Task = NULL;
 TaskHandle_t hStackMonTask = NULL;
 TaskHandle_t hWebServerTask = NULL;
 
+
+
 /// make mqtt thread safe
 void mycallback(char *topic, byte *message, unsigned int length);
 
 void setup()
 {
     Serial.begin(9600);
+
+    // Setup logging
+    debug_tools::logOptions.printToSerial = true;
+    debug_tools::logOptions.logToMqtt = true;
+    debug_tools::logPrefix = chicken_coop::PREFIX;
+    
     while (!Serial && millis() < 3000)
     {
     } // wait a moment for usb
@@ -65,8 +73,7 @@ void setup()
     Serial.print("Adres to: http://");
     Serial.print(chicken_coop::MDNS_HOSTNAME);
     Serial.println(".local");
-    debug_tools::logPrefix = chicken_coop::PREFIX;
-
+    
     chicken_coop::client.setServer(host, mqttPort);
     chicken_coop::client.setCallback(mycallback);
 
