@@ -31,6 +31,7 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 
 #include "relay_controller/constants.h"
 #include "relay_controller/tasks.h"
+#include "relay_controller/mqtt.h"
 
 // MQTT broker settings
 const char *host = MQTT_HOST;
