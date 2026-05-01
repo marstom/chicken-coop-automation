@@ -5,7 +5,7 @@
 #include "chicken_coop/constants.h"
 #include "mqtt_comm.h"
 #include "chicken_coop/gauge_page_chicken_coop.h"
-
+#include "debug_tools.h"
 namespace chicken_coop
 {
 
@@ -47,18 +47,29 @@ void setupMDNS(const char *hostname)
     mdns_service_add(NULL, "mqtt", "_tcp", 1883, NULL, 0);
 }
 
+
+/// @brief Here I handled with reconnect, in relay controller, hard-reset
+// Experiment with 2 approaches
+/// @param event 
 void onWiFiEvent(WiFiEvent_t event)
 {
     switch (event)
     {
-    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-        Serial.print("WiFi connected, IP: ");
-        Serial.println(WiFi.localIP());
-        setupMDNS(MDNS_HOSTNAME);
-        break;
+    // case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+    //     Serial.print("WiFi connected, IP: ");
+    //     Serial.println(WiFi.localIP());
+    //     setupMDNS(MDNS_HOSTNAME);
+    //     break;
+    // case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+    //     Serial.println("WiFi disconnected. Try reconnect again...");
+    //     WiFi.reconnect();
+    //     break;
+
+    /// very harsh approach - reset EVERYTHING 
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        Serial.println("WiFi disconnected. Try reconnect again...");
-        WiFi.reconnect();
+        debug_tools::logMessage("WiFi disconnected. Restarting controller...");
+        delay(3000);
+        ESP.restart();
         break;
     default:
         break;

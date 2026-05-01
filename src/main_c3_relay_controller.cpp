@@ -50,6 +50,7 @@ void mycallback(char *topic, byte *message, unsigned int length);
 
 // void taskBLE(void *pvParameters);
 bool connectToMqttBroker();
+void onWiFiEvent(WiFiEvent_t event);
 
 void setup()
 {
@@ -58,6 +59,7 @@ void setup()
     {
     } // wait a moment for usb
     my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "basement");
+    WiFi.onEvent(onWiFiEvent);
     debug_tools::logPrefix = relay_controller::PREFIX;
 
     pinMode(relay_controller::RELAY_PIN, OUTPUT); // RELAY_PIN as output
@@ -155,6 +157,22 @@ void loop()
     ArduinoOTA.handle();
 }
 
+// HARD reset on WIFi disconnect
+// TODO, try which is better reconnect pattern, or full restart pattern?
+void onWiFiEvent(WiFiEvent_t event)
+{
+    switch (event)
+    {
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+        debug_tools::logMessage("WiFi disconnected. Restarting controller...");
+        delay(3000);
+        ESP.restart();
+        break;
+    default:
+        break;
+    }
+}
+
 
 
 bool connectToMqttBroker()
@@ -167,6 +185,9 @@ bool connectToMqttBroker()
     return relay_controller::client.connect(relay_controller::THINGNAME);
 }
 
+// callback triggers when a message is received
+// Triggers on topic: "coop/relay/1/set"
+// because it subscribes RELAY_1_SET_TOPIC
 void mycallback(char *topic, byte *message, unsigned int length)
 {
     String msgTemp = "";
