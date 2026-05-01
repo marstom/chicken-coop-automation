@@ -58,10 +58,10 @@ void setup()
     {
     } // wait a moment for usb
     my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "basement");
-    debug_tools::logPrefix = PREFIX;
+    debug_tools::logPrefix = relay_controller::PREFIX;
 
-    pinMode(RELAY_PIN, OUTPUT); // RELAY_PIN as output
-    digitalWrite(RELAY_PIN, HIGH);
+    pinMode(relay_controller::RELAY_PIN, OUTPUT); // RELAY_PIN as output
+    digitalWrite(relay_controller::RELAY_PIN, HIGH);
 
     relay_controller::client.setServer(host, mqttPort);
     relay_controller::client.setCallback(mycallback);
@@ -72,10 +72,10 @@ void setup()
         {
             debug_tools::logMessage("☑ Connected to MQTT broker!");
             // Subscriptions here
-            relay_controller::client.subscribe(RELAY_1_SET_TOPIC);
+            relay_controller::client.subscribe(relay_controller::RELAY_1_SET_TOPIC);
             ////////////
             communication::MqttMessage msg;
-            msg.setContent(STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
+            msg.setContent(relay_controller::STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
             msg.sendToQueue();
         }
         else
@@ -87,7 +87,7 @@ void setup()
     }
 
     debug_tools::logMessage("Initialize watchdog");
-    esp_task_wdt_init(WDT_TIMEOUT, true);
+    esp_task_wdt_init(relay_controller::WDT_TIMEOUT, true);
 
     // Init wireless updates
     debug_tools::logMessage("Initialize OTA updates via Wireless");
@@ -105,41 +105,43 @@ void setup()
 
     ArduinoOTA.begin();
     communication::initQueue();
-    // main mqtt task
+// main mqtt task
     xTaskCreatePinnedToCore(relay_controller::taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
 // hardware sensors tasks
-#ifdef DEVICE_RELAY_ENABLED
-    xTaskCreate(relay_controller::taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
-#endif
-#ifdef BLE_ENABLED
-    // 1) MUST start BLE before using any other BLE APIs
-    if (!BLE.begin())
+    if constexpr (relay_controller::DEVICE_RELAY_ENABLED)
     {
-        Serial.println("BLE.begin() failed");
-        for (;;)
-            delay(1000);
+        xTaskCreate(relay_controller::taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
     }
+    if constexpr (relay_controller::BLE_ENABLED)
+    {
+    // 1) MUST start BLE before using any other BLE APIs
+        if (!BLE.begin())
+        {
+            Serial.println("BLE.begin() failed");
+            for (;;)
+                delay(1000);
+        }
 
-    BLE.setLocalName("tomeksEspLocalName");
-    BLE.setDeviceName("tomeksEspDeviceName");
+        BLE.setLocalName("tomeksEspLocalName");
+        BLE.setDeviceName("tomeksEspDeviceName");
 
-    // build GATT
-    relay_controller::deviceService.addCharacteristic(relay_controller::deviceRequestCharacteristic);
-    relay_controller::deviceService.addCharacteristic(relay_controller::deviceResponseCharacteristic);
+        // build GATT
+        relay_controller::deviceService.addCharacteristic(relay_controller::deviceRequestCharacteristic);
+        relay_controller::deviceService.addCharacteristic(relay_controller::deviceResponseCharacteristic);
 
-    // add descriptors
-    relay_controller::deviceRequestCharacteristic.addDescriptor(relay_controller::reqName);
-    relay_controller::deviceResponseCharacteristic.addDescriptor(relay_controller::respName);
+        // add descriptors
+        relay_controller::deviceRequestCharacteristic.addDescriptor(relay_controller::reqName);
+        relay_controller::deviceResponseCharacteristic.addDescriptor(relay_controller::respName);
 
-    relay_controller::deviceResponseCharacteristic.setValue(""); // initial value
+        relay_controller::deviceResponseCharacteristic.setValue(""); // initial value
 
-    BLE.setAdvertisedService(relay_controller::deviceService);
-    BLE.addService(relay_controller::deviceService);
-    BLE.advertise();
+        BLE.setAdvertisedService(relay_controller::deviceService);
+        BLE.addService(relay_controller::deviceService);
+        BLE.advertise();
 
-    Serial.println("BLE initialized, advertising...");
-    xTaskCreate(relay_controller::taskBLE, "taskBLE", 4096, NULL, 1, NULL);
-#endif
+        Serial.println("BLE initialized, advertising...");
+        xTaskCreate(relay_controller::taskBLE, "taskBLE", 4096, NULL, 1, NULL);
+    }
     xTaskCreate(relay_controller::taskTcpServer, "taskTcpServer", 4096, NULL, 1, NULL);
 
     // monitoring tasks
@@ -159,10 +161,10 @@ bool connectToMqttBroker()
 {
     if (MQTT_USER[0] != '\0')
     {
-        return relay_controller::client.connect(THINGNAME, MQTT_USER, MQTT_PASS);
+        return relay_controller::client.connect(relay_controller::THINGNAME, MQTT_USER, MQTT_PASS);
     }
 
-    return relay_controller::client.connect(THINGNAME);
+    return relay_controller::client.connect(relay_controller::THINGNAME);
 }
 
 void mycallback(char *topic, byte *message, unsigned int length)

@@ -1,4 +1,3 @@
-#pragma once
 #include "mqtt_comm.h"
 
 namespace communication

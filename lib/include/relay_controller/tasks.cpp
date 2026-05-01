@@ -9,9 +9,14 @@
 #include <WiFiUdp.h>
 #include "esp_task_wdt.h"
 #include "mqtt_comm.h"
+#include "debug_tools.h"
 #include <ArduinoBLE.h>
 
 #include "relay_controller/constants.h"
+
+extern TaskHandle_t hMQTTTask;
+extern TaskHandle_t hBME280Task;
+extern TaskHandle_t hRelayTask;
 
 namespace relay_controller
 {
@@ -115,12 +120,13 @@ namespace relay_controller
     {
         for (;;)
         {
-#ifdef ENABLE_MONITORING
-            debug_tools::printStackInfo("MQTTTask", hMQTTTask);
-            debug_tools::printStackInfo("BME280Task", hBME280Task);
-            debug_tools::printStackInfo("RelayTask", hRelayTask);
-            debug_tools::printHeap(); // DEBUG memory leaks
-#endif
+            if constexpr (ENABLE_MONITORING)
+            {
+                debug_tools::printStackInfo("MQTTTask", ::hMQTTTask);
+                debug_tools::printStackInfo("BME280Task", ::hBME280Task);
+                debug_tools::printStackInfo("RelayTask", ::hRelayTask);
+                debug_tools::printHeap(); // DEBUG memory leaks
+            }
             vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
         }
     }

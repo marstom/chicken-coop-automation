@@ -7,9 +7,6 @@
 namespace relay_controller
 {
     extern WiFiClient net;
-    extern const char *const deviceServiceUuid;
-    extern const char *const deviceServiceRequestCharacteristicUuid;
-    extern const char *const deviceServiceResponseCharacteristicUuid;
 
     extern PubSubClient client;
     // GATT objects
