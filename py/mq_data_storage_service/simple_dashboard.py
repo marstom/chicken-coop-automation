@@ -43,14 +43,14 @@ async def elk():
     Good for elastic format from esp
     ESP32 -> MQTT broker -> Elastic ingestion -> Elasticsearch -> Kibana
     {
-  "@timestamp": "2026-04-19T12:34:56Z",
-  "device": "chicken-coop-1",
-  "temperature": 24.3,
-  "humidity": 51.2,
-  "pressure": 1008.7,
-  "altitude": 122.4,
-  "ammonia": 8.1
-}
+        "@timestamp": "2026-04-19T12:34:56Z",
+        "device": "chicken-coop-1",
+        "temperature": 24.3,
+        "humidity": 51.2,
+        "pressure": 1008.7,
+        "altitude": 122.4,
+        "ammonia": 8.1
+    }
     """
     ...
 
