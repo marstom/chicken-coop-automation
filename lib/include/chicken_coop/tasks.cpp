@@ -2,7 +2,7 @@
 #include <esp_task_wdt.h>
 #include <Wire.h>
 #include <WiFi.h>
-#include <debug_tools.h>
+#include "debug_tools/debug_tools.h"
 
 #include "chicken_coop/tasks.h"
 #include "chicken_coop/constants.h"

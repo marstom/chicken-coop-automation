@@ -5,7 +5,7 @@
 #include "chicken_coop/constants.h"
 #include "mqtt_comm.h"
 #include "chicken_coop/gauge_page_chicken_coop.h"
-#include "debug_tools.h"
+#include "debug_tools/debug_tools.h"
 namespace chicken_coop
 {
 

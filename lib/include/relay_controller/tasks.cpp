@@ -9,7 +9,7 @@
 #include <WiFiUdp.h>
 #include "esp_task_wdt.h"
 #include "mqtt_comm.h"
-#include "debug_tools.h"
+#include "debug_tools/debug_tools.h"
 #include "ble.h"
 #include <ArduinoBLE.h>
 

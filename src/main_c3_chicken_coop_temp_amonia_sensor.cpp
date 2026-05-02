@@ -31,9 +31,9 @@ dns-sd -B _http._tcp
 
 // my libs
 #include "secrets.h"
-#include "wifi_conn.h"
+#include "common/wifi_conn/wifi_conn.h"
 #include "mqtt_comm.h"
-#include "debug_tools.h"
+#include "debug_tools/debug_tools.h"
 #include "chicken_coop/tasks.h"
 #include "chicken_coop/constants.h"
 #include "chicken_coop/web.h"

@@ -25,9 +25,9 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include <ArduinoBLE.h>
 
 // my libs
-#include "wifi_conn.h"
+#include "common/wifi_conn/wifi_conn.h"
 #include "mqtt_comm.h"
-#include "debug_tools.h"
+#include "debug_tools/debug_tools.h"
 #include "secrets.h"
 
 #include "relay_controller/constants.h"
@@ -62,7 +62,7 @@ void setup()
     while (!Serial && millis() < 3000)
     {
     } // wait a moment for usb
-    my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "basement");
+    common::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "basement");
     common::wifi_event::g_instance_name = "Relay Controller";
     common::wifi_event::g_mdns_hostname = "relay";
     WiFi.onEvent(common::wifi_event::onWiFiEvent);
@@ -72,11 +72,11 @@ void setup()
 
     pinMode(relay_controller::RELAY_PIN, OUTPUT); // RELAY_PIN as output
     digitalWrite(relay_controller::RELAY_PIN, HIGH);
-
+    // TODO move mqtt to separate file common/mqtt.h / .cpp
     relay_controller::client.setServer(host, mqttPort);
     relay_controller::client.setCallback(mycallback);
 
-    // TODO move mqtt to separate file
+    
     while (!relay_controller::client.connected())
     {
         if (connectToMqttBroker())
@@ -96,13 +96,15 @@ void setup()
             delay(2000);
         }
     }
-
+    /////////////////////////////
     debug_tools::logMessage("Initialize watchdog");
     esp_task_wdt_init(relay_controller::WDT_TIMEOUT, true);
 
+    // TODO move mqtt to separate file
     // Init wireless updates
     debug_tools::logMessage("Initialize OTA updates via Wireless");
     debug_tools::logMessage("UPDATE VIA OTA");
+    ////////move to ota file common/ota.h ota.cpp
     ArduinoOTA.setHostname("esp32c3"); // must match upload_port in platformio.ini
     ArduinoOTA
         .onStart([]()
@@ -115,6 +117,7 @@ void setup()
                  { debug_tools::logMessage("Error[%u]: ", error); });
 
     ArduinoOTA.begin();
+    /////////////
     communication::initQueue();
     // main mqtt task
     xTaskCreatePinnedToCore(relay_controller::taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
