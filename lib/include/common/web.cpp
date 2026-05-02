@@ -10,33 +10,65 @@
 namespace common
 {
 
-void setupMDNS(const char *hostname, const char *instance_name)
-{
-
-    // initialize mDNS service
-    esp_err_t err = mdns_init();
-    if (err)
+    void setupMDNS(const char *hostname, const char *instance_name)
     {
-        printf("MDNS Init failed: %d\n", err);
-        return;
+
+        // initialize mDNS service
+        esp_err_t err = mdns_init();
+        if (err)
+        {
+            printf("MDNS Init failed: %d\n", err);
+            return;
+        }
+
+        // set hostname
+        mdns_hostname_set(hostname);
+        // set default instance
+        mdns_instance_name_set(instance_name);
+
+        Serial.print("mDNS started: http://");
+        Serial.print(hostname);
+        Serial.println(".local");
+
+        Serial.print("IP address: ");
+        Serial.println(WiFi.localIP());
+
+        // add our services
+        mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
+        mdns_service_add(NULL, "_ota", "_tcp", 3232, NULL, 0);
+        mdns_service_add(NULL, "mqtt", "_tcp", 1883, NULL, 0);
     }
 
-    // set hostname
-    mdns_hostname_set(hostname);
-    // set default instance
-    mdns_instance_name_set(instance_name);
+    // HARD reset on WIFi disconnect
+    // TODO, try which is better reconnect pattern, or full restart pattern?
 
-    Serial.print("mDNS started: http://");
-    Serial.print(hostname);
-    Serial.println(".local");
-
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    // add our services
-    mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
-    mdns_service_add(NULL, "_ota", "_tcp", 3232, NULL, 0);
-    mdns_service_add(NULL, "mqtt", "_tcp", 1883, NULL, 0);
-}
+    namespace wifi_event
+    {
+        // cpp way, cpp not allow nested function, like wrapper pattern in python...
+        const char *g_mdns_hostname = nullptr;
+        const char *g_instance_name = nullptr;
+        void onWiFiEvent(WiFiEvent_t event)
+        {
+            switch (event)
+            {
+            case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+                Serial.print("WiFi connected, IP: ");
+                Serial.println(WiFi.localIP());
+                setupMDNS(g_mdns_hostname, g_instance_name);
+                break;
+            case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+                Serial.println("WiFi disconnected. Try reconnect again...");
+                WiFi.reconnect();
+                break;
+            // case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            //     debug_tools::logMessage("WiFi disconnected. Restarting controller...");
+            //     delay(3000);
+            //     ESP.restart();
+            //     break;
+            default:
+                break;
+            }
+        }
+    }
 
 }

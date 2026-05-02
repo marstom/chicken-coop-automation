@@ -9,6 +9,7 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_task_wdt.h"
+#include <WiFi.h>
 
 #include <HTTPClient.h>
 #include <PubSubClient.h>
@@ -32,7 +33,9 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include "relay_controller/constants.h"
 #include "relay_controller/tasks.h"
 #include "relay_controller/mqtt.h"
+#include "relay_controller/ble.h"
 #include "common/web.h"
+
 
 // MQTT broker settings
 const char *host = MQTT_HOST;
@@ -51,7 +54,7 @@ void mycallback(char *topic, byte *message, unsigned int length);
 
 // void taskBLE(void *pvParameters);
 bool connectToMqttBroker();
-void onWiFiEvent(WiFiEvent_t event);
+// void onWiFiEvent(WiFiEvent_t event);
 
 void setup()
 {
@@ -60,7 +63,9 @@ void setup()
     {
     } // wait a moment for usb
     my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "basement");
-    WiFi.onEvent(onWiFiEvent);
+    common::wifi_event::g_instance_name = "Relay Controller";
+    common::wifi_event::g_mdns_hostname = "relay";
+    WiFi.onEvent(common::wifi_event::onWiFiEvent);
     // ~chicken_coop~::setupMDNS(chicken_coop::MDNS_HOSTNAME); // 2modules needs this, then create common module for it
     common::setupMDNS(relay_controller::MDNS_HOSTNAME, "Relay Controller");
     debug_tools::logPrefix = relay_controller::PREFIX;
@@ -117,38 +122,8 @@ void setup()
     xTaskCreate(relay_controller::taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
 
     // TODO move ble to ble.h
+    relay_controller::setupBLE("Piwnica", "Drzwi w piwnicy");
 
-    if constexpr (relay_controller::BLE_ENABLED)
-    {
-    // 1) MUST start BLE before using any other BLE APIs
-        if (!BLE.begin())
-        {
-            Serial.println("BLE.begin() failed");
-            for (;;)
-                delay(1000);
-        }
-
-        BLE.setLocalName("tomeksEspLocalName");
-        BLE.setDeviceName("tomeksEspDeviceName");
-
-        // TODO move to ble.h
-        // build GATT
-        relay_controller::deviceService.addCharacteristic(relay_controller::deviceRequestCharacteristic);
-        relay_controller::deviceService.addCharacteristic(relay_controller::deviceResponseCharacteristic);
-
-        // add descriptors
-        relay_controller::deviceRequestCharacteristic.addDescriptor(relay_controller::reqName);
-        relay_controller::deviceResponseCharacteristic.addDescriptor(relay_controller::respName);
-
-        relay_controller::deviceResponseCharacteristic.setValue(""); // initial value
-
-        BLE.setAdvertisedService(relay_controller::deviceService);
-        BLE.addService(relay_controller::deviceService);
-        BLE.advertise();
-
-        Serial.println("BLE initialized, advertising...");
-        xTaskCreate(relay_controller::taskBLE, "taskBLE", 4096, NULL, 1, NULL);
-    }
     xTaskCreate(relay_controller::taskTcpServer, "taskTcpServer", 4096, NULL, 1, NULL);
 
     // monitoring tasks
@@ -161,22 +136,6 @@ void loop()
 {
     // Keep alive OTA wireless update process.
     ArduinoOTA.handle();
-}
-
-// HARD reset on WIFi disconnect
-// TODO, try which is better reconnect pattern, or full restart pattern?
-void onWiFiEvent(WiFiEvent_t event)
-{
-    switch (event)
-    {
-    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        debug_tools::logMessage("WiFi disconnected. Restarting controller...");
-        delay(3000);
-        ESP.restart();
-        break;
-    default:
-        break;
-    }
 }
 
 
