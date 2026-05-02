@@ -16,6 +16,7 @@ String press = "";
 String hum = "";
 String alt = "";
 
+// TODO change to common.h
 // set hostname for my chickenCOOP server
 // https://docs.espressif.com/projects/esp-idf/en/v4.3/esp32c3/api-reference/protocols/mdns.html
 void setupMDNS(const char *hostname)

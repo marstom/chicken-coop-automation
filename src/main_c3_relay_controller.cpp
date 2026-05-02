@@ -32,6 +32,7 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include "relay_controller/constants.h"
 #include "relay_controller/tasks.h"
 #include "relay_controller/mqtt.h"
+#include "common/web.h"
 
 // MQTT broker settings
 const char *host = MQTT_HOST;
@@ -60,6 +61,8 @@ void setup()
     } // wait a moment for usb
     my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "basement");
     WiFi.onEvent(onWiFiEvent);
+    // ~chicken_coop~::setupMDNS(chicken_coop::MDNS_HOSTNAME); // 2modules needs this, then create common module for it
+    common::setupMDNS(relay_controller::MDNS_HOSTNAME, "Relay Controller");
     debug_tools::logPrefix = relay_controller::PREFIX;
 
     pinMode(relay_controller::RELAY_PIN, OUTPUT); // RELAY_PIN as output
@@ -68,6 +71,7 @@ void setup()
     relay_controller::client.setServer(host, mqttPort);
     relay_controller::client.setCallback(mycallback);
 
+    // TODO move mqtt to separate file
     while (!relay_controller::client.connected())
     {
         if (connectToMqttBroker())
@@ -107,13 +111,13 @@ void setup()
 
     ArduinoOTA.begin();
     communication::initQueue();
-// main mqtt task
+    // main mqtt task
     xTaskCreatePinnedToCore(relay_controller::taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
-// hardware sensors tasks
-    if constexpr (relay_controller::DEVICE_RELAY_ENABLED)
-    {
-        xTaskCreate(relay_controller::taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
-    }
+    // hardware sensors tasks
+    xTaskCreate(relay_controller::taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
+
+    // TODO move ble to ble.h
+
     if constexpr (relay_controller::BLE_ENABLED)
     {
     // 1) MUST start BLE before using any other BLE APIs
@@ -127,6 +131,7 @@ void setup()
         BLE.setLocalName("tomeksEspLocalName");
         BLE.setDeviceName("tomeksEspDeviceName");
 
+        // TODO move to ble.h
         // build GATT
         relay_controller::deviceService.addCharacteristic(relay_controller::deviceRequestCharacteristic);
         relay_controller::deviceService.addCharacteristic(relay_controller::deviceResponseCharacteristic);
@@ -150,6 +155,7 @@ void setup()
     xTaskCreate(relay_controller::taskStackMonitor, "taskStackMonitor", 4096, NULL, 1, &hStackMonTask);
     debug_tools::logMessage("Tasks created, watchdog armed!");
 }
+
 
 void loop()
 {
