@@ -34,6 +34,7 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include "relay_controller/tasks.h"
 #include "relay_controller/mqtt.h"
 #include "relay_controller/ble.h"
+#include "common/mqtt.h"
 #include "common/web.h"
 
 
@@ -72,31 +73,16 @@ void setup()
 
     pinMode(relay_controller::RELAY_PIN, OUTPUT); // RELAY_PIN as output
     digitalWrite(relay_controller::RELAY_PIN, HIGH);
-    // TODO move mqtt to separate file common/mqtt.h / .cpp
-    relay_controller::client.setServer(host, mqttPort);
-    relay_controller::client.setCallback(mycallback);
+    common::mqtt::setupAndConnect(
+        relay_controller::client,
+        host,
+        mqttPort,
+        mycallback,
+        connectToMqttBroker,
+        relay_controller::RELAY_1_SET_TOPIC,
+        relay_controller::STATUS_TOPIC,
+        "{\"message\": \"Initialized the connection from c3 relay controller\"}");
 
-    
-    while (!relay_controller::client.connected())
-    {
-        if (connectToMqttBroker())
-        {
-            debug_tools::logMessage("☑ Connected to MQTT broker!");
-            // Subscriptions here
-            relay_controller::client.subscribe(relay_controller::RELAY_1_SET_TOPIC);
-            ////////////
-            communication::MqttMessage msg;
-            msg.setContent(relay_controller::STATUS_TOPIC, "{\"message\": \"Initialized the connection from c3 relay controller\"}");
-            msg.sendToQueue();
-        }
-        else
-        {
-            debug_tools::logMessage("✖ Failed to connect, try again in 2 seconds, rc=");
-            debug_tools::logMessage("%d", relay_controller::client.state());
-            delay(2000);
-        }
-    }
-    /////////////////////////////
     debug_tools::logMessage("Initialize watchdog");
     esp_task_wdt_init(relay_controller::WDT_TIMEOUT, true);
 
