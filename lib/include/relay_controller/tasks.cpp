@@ -10,6 +10,7 @@
 #include "esp_task_wdt.h"
 #include "mqtt_comm.h"
 #include "debug_tools.h"
+#include "ble.h"
 #include <ArduinoBLE.h>
 
 #include "relay_controller/constants.h"
@@ -25,18 +26,7 @@ namespace relay_controller
     // UUIDs
     WiFiClient net;
 
-
     PubSubClient client(net);
-    // GATT objects
-    BLEService deviceService(deviceServiceUuid);
-
-    // phone writes
-    BLEStringCharacteristic deviceRequestCharacteristic(deviceServiceRequestCharacteristicUuid, BLEWrite, 32);
-    // phone reads / notify phone
-    BLEStringCharacteristic deviceResponseCharacteristic(deviceServiceResponseCharacteristicUuid, BLERead | BLENotify, 32);
-
-    BLEDescriptor reqName("2901", "Phone → ESP request");
-    BLEDescriptor respName("2901", "ESP → Phone response");
 
     // direct tcp
     void taskTcpServer(void *pvParameters)

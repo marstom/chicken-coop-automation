@@ -4,6 +4,16 @@
 namespace relay_controller
 {
 
+    BLEService deviceService(deviceServiceUuid);
+
+    // phone writes
+    BLEStringCharacteristic deviceRequestCharacteristic(deviceServiceRequestCharacteristicUuid, BLEWrite, 32);
+    // phone reads / notify phone
+    BLEStringCharacteristic deviceResponseCharacteristic(deviceServiceResponseCharacteristicUuid, BLERead | BLENotify, 32);
+
+    BLEDescriptor reqName("2901", "Phone → ESP request");
+    BLEDescriptor respName("2901", "ESP → Phone response");
+
     void setupBLE(const char *deviceName, const char *localName)
     {
         if constexpr (relay_controller::BLE_ENABLED)
