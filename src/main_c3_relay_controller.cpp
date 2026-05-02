@@ -17,10 +17,6 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 // heap monitoring
 #include "esp_heap_caps.h"
 
-// Wireless code update and monitoring! Cool thing!
-#include <ArduinoOTA.h>
-#include <WiFiUdp.h>
-
 // BLE support
 #include <ArduinoBLE.h>
 
@@ -35,6 +31,7 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include "relay_controller/mqtt.h"
 #include "relay_controller/ble.h"
 #include "common/mqtt.h"
+#include "common/ota.h"
 #include "common/web.h"
 
 
@@ -86,24 +83,8 @@ void setup()
     debug_tools::logMessage("Initialize watchdog");
     esp_task_wdt_init(relay_controller::WDT_TIMEOUT, true);
 
-    // TODO move mqtt to separate file
-    // Init wireless updates
-    debug_tools::logMessage("Initialize OTA updates via Wireless");
-    debug_tools::logMessage("UPDATE VIA OTA");
-    ////////move to ota file common/ota.h ota.cpp
-    ArduinoOTA.setHostname("esp32c3"); // must match upload_port in platformio.ini
-    ArduinoOTA
-        .onStart([]()
-                 { debug_tools::logMessage("OTA update start"); })
-        .onEnd([]()
-               { debug_tools::logMessage("\nOTA update end"); })
-        .onProgress([](unsigned int progress, unsigned int total)
-                    { debug_tools::logMessage("Progress: %u%%\r", (progress / (total / 100))); })
-        .onError([](ota_error_t error)
-                 { debug_tools::logMessage("Error[%u]: ", error); });
+    common::ota::setup("esp32c3"); // must match upload_port in platformio.ini
 
-    ArduinoOTA.begin();
-    /////////////
     communication::initQueue();
     // main mqtt task
     xTaskCreatePinnedToCore(relay_controller::taskMQTT, "taskMQTT", 2048 * 4, NULL, 1, &hMQTTTask, 0);
@@ -124,7 +105,7 @@ void setup()
 void loop()
 {
     // Keep alive OTA wireless update process.
-    ArduinoOTA.handle();
+    common::ota::handle();
 }
 
 
