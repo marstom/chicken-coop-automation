@@ -51,7 +51,6 @@ TaskHandle_t hRelayTask = NULL;
 void mycallback(char *topic, byte *message, unsigned int length);
 
 // void taskBLE(void *pvParameters);
-bool connectToMqttBroker();
 // void onWiFiEvent(WiFiEvent_t event);
 
 void setup()
@@ -70,12 +69,16 @@ void setup()
 
     pinMode(relay_controller::RELAY_PIN, OUTPUT); // RELAY_PIN as output
     digitalWrite(relay_controller::RELAY_PIN, HIGH);
-    common::mqtt::setupAndConnect(
-        relay_controller::client,
+
+    common::mqtt::Mqtt mqtt(relay_controller::client);
+    mqtt.addCallback(mycallback);
+    mqtt.setupAndConnect(
+        [&mqtt]()
+        {
+            return mqtt.connectToMqttBroker(MQTT_USER, MQTT_PASS, relay_controller::THINGNAME);
+        },
         host,
         mqttPort,
-        mycallback,
-        connectToMqttBroker,
         relay_controller::RELAY_1_SET_TOPIC,
         relay_controller::STATUS_TOPIC,
         "{\"message\": \"Initialized the connection from c3 relay controller\"}");
@@ -109,16 +112,6 @@ void loop()
 }
 
 
-
-bool connectToMqttBroker()
-{
-    if (MQTT_USER[0] != '\0')
-    {
-        return relay_controller::client.connect(relay_controller::THINGNAME, MQTT_USER, MQTT_PASS);
-    }
-
-    return relay_controller::client.connect(relay_controller::THINGNAME);
-}
 
 // callback triggers when a message is received
 // Triggers on topic: "coop/relay/1/set"

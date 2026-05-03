@@ -5,18 +5,32 @@
 
 namespace common::mqtt
 {
-    void setupAndConnect(
-        PubSubClient &client,
+
+    Mqtt::Mqtt(PubSubClient &mqttClient) : client(mqttClient)
+    {
+        debug_tools::logMessage("Mqtt constructor");
+    }
+
+    Mqtt::~Mqtt()
+    {
+        debug_tools::logMessage("Mqtt destructor");
+    }
+
+    void Mqtt::addCallback(MessageCallback callback)
+    {
+        client.setCallback(callback);
+    }
+
+    void Mqtt::setupAndConnect(
+        ConnectFn connectToBroker,
         const char *host,
         uint16_t port,
-        MessageCallback callback,
-        ConnectFn connectToBroker,
         const char *subscribeTopic,
         const char *statusTopic,
         const char *statusPayload)
     {
+
         client.setServer(host, port);
-        client.setCallback(callback);
 
         while (!client.connected())
         {
@@ -36,5 +50,15 @@ namespace common::mqtt
                 delay(2000);
             }
         }
+    }
+
+    bool Mqtt::connectToMqttBroker(const char *mqttUser, const char *mqttPass, const char *thingName)
+    {
+        if (mqttUser[0] != '\0')
+        {
+            return client.connect(thingName, mqttUser, mqttPass);
+        }
+
+        return client.connect(thingName);
     }
 }
