@@ -80,12 +80,13 @@ namespace relay_controller
                         Serial.println(receivedData == pass);
                         if (receivedData == pass)
                         {
-                            Serial.println("OPEN BLE");
+                            Serial.println("Open the door BLE ...");
                             String resp = "Status: The door has been opened!";
                             deviceResponseCharacteristic.setValue(resp);
                             digitalWrite(RELAY_PIN, LOW);
                             vTaskDelay(pdMS_TO_TICKS(6000));
                             digitalWrite(RELAY_PIN, HIGH);
+                            Serial.println("Door closed.");
                         }
                         else
                         {
@@ -147,9 +148,11 @@ namespace relay_controller
             {
                 if (cmd.on)
                 {
+                    Serial.println("Door opened ...");
                     digitalWrite(RELAY_PIN, LOW);
                     vTaskDelay(pdMS_TO_TICKS(6000));
                     digitalWrite(RELAY_PIN, HIGH);
+                    Serial.println("Door CLOSED");
                 }
                 else
                 {

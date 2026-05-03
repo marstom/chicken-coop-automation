@@ -63,7 +63,6 @@ void setup()
     common::wifi_event::g_instance_name = "Relay Controller";
     common::wifi_event::g_mdns_hostname = "relay";
     WiFi.onEvent(common::wifi_event::onWiFiEvent);
-    // ~chicken_coop~::setupMDNS(chicken_coop::MDNS_HOSTNAME); // 2modules needs this, then create common module for it
     common::setupMDNS(relay_controller::MDNS_HOSTNAME, "Relay Controller");
     debug_tools::logPrefix = relay_controller::PREFIX;
 
