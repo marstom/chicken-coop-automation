@@ -1,52 +1,38 @@
-#include "tasks.h"
-#include "constants.h"
+#include "relay_controller/ble.h"
+
+#include "common/ble.h"
+#include "relay_controller/constants.h"
+#include "relay_controller/tasks.h"
 
 namespace relay_controller
 {
+    namespace
+    {
+        common::ble::Ble bleDevice(
+            deviceServiceUuid,
+            deviceServiceRequestCharacteristicUuid,
+            deviceServiceResponseCharacteristicUuid,
+            "Phone to ESP request",
+            "ESP to Phone response");
+    }
 
-    BLEService deviceService(deviceServiceUuid);
-
-    // phone writes
-    BLEStringCharacteristic deviceRequestCharacteristic(deviceServiceRequestCharacteristicUuid, BLEWrite, 32);
-    // phone reads / notify phone
-    BLEStringCharacteristic deviceResponseCharacteristic(deviceServiceResponseCharacteristicUuid, BLERead | BLENotify, 32);
-
-    BLEDescriptor reqName("2901", "Phone → ESP request");
-    BLEDescriptor respName("2901", "ESP → Phone response");
+    BLEService &deviceService = bleDevice.service();
+    BLEStringCharacteristic &deviceRequestCharacteristic = bleDevice.requestCharacteristic();
+    BLEStringCharacteristic &deviceResponseCharacteristic = bleDevice.responseCharacteristic();
 
     void setupBLE(const char *deviceName, const char *localName)
     {
         if constexpr (relay_controller::BLE_ENABLED)
         {
-            // 1) MUST start BLE before using any other BLE APIs
-            if (!BLE.begin())
+            if (!bleDevice.begin(deviceName, localName))
             {
                 Serial.println("BLE.begin() failed");
                 for (;;)
                     delay(1000);
             }
 
-            BLE.setLocalName(localName);
-            BLE.setDeviceName(deviceName);
-
-            // TODO move to ble.h
-            // build GATT
-            relay_controller::deviceService.addCharacteristic(relay_controller::deviceRequestCharacteristic);
-            relay_controller::deviceService.addCharacteristic(relay_controller::deviceResponseCharacteristic);
-
-            // add descriptors
-            relay_controller::deviceRequestCharacteristic.addDescriptor(relay_controller::reqName);
-            relay_controller::deviceResponseCharacteristic.addDescriptor(relay_controller::respName);
-
-            relay_controller::deviceResponseCharacteristic.setValue(""); // initial value
-
-            BLE.setAdvertisedService(relay_controller::deviceService);
-            BLE.addService(relay_controller::deviceService);
-            BLE.advertise();
-
             Serial.println("BLE initialized, advertising...");
             xTaskCreate(relay_controller::taskBLE, "taskBLE", 4096, NULL, 1, NULL);
         }
     }
-
 }

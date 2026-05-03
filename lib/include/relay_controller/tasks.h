@@ -10,15 +10,12 @@ namespace relay_controller
 
     extern PubSubClient client;
     // GATT objects
-    extern BLEService deviceService;
+    extern BLEService &deviceService;
 
     // phone writes
-    extern BLEStringCharacteristic deviceRequestCharacteristic;
+    extern BLEStringCharacteristic &deviceRequestCharacteristic;
     // phone reads / notify phone
-    extern BLEStringCharacteristic deviceResponseCharacteristic;
-
-    extern BLEDescriptor reqName;
-    extern BLEDescriptor respName;
+    extern BLEStringCharacteristic &deviceResponseCharacteristic;
 
     /// make mqtt thread safe
     void taskMQTT(void *pvParameters); // Spin all the time and keep receiving the messages!

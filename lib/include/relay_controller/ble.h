@@ -5,12 +5,9 @@ namespace relay_controller
 {
     // GATT objects
 
-    extern BLEService deviceService;
-    extern BLEStringCharacteristic deviceRequestCharacteristic;
-    extern BLEStringCharacteristic deviceResponseCharacteristic;
-    extern BLEDescriptor reqName;
-    extern BLEDescriptor respName;
-
+    extern BLEService &deviceService;
+    extern BLEStringCharacteristic &deviceRequestCharacteristic;
+    extern BLEStringCharacteristic &deviceResponseCharacteristic;
 
     void setupBLE(const char *deviceName, const char *localName);
 
