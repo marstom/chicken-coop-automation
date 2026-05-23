@@ -19,8 +19,6 @@ from models import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-
-
 cli = typer.Typer()
 
 

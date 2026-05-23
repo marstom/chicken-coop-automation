@@ -66,8 +66,6 @@ export default function HomeScreen() {
     <SafeAreaView>
       <Text style={{ fontSize: 32 }}>The Home Screen</Text>
       <Text>The Home Screen</Text>
-      <Text>The Home Screen</Text>
-      <Text>The Home Screen</Text>
       <View style={styles.fixToText}>
         <Button
           title="Run"
