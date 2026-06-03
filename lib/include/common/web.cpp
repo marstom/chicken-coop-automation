@@ -4,6 +4,7 @@
 #include <WiFi.h>
 
 #include "debug_tools/debug_tools.h"
+#include "wifi_recovery.h"
 
 // set hostname for my chickenCOOP server
 // @param hostname - name of hot chicken it would be chicken.local
@@ -60,32 +61,33 @@ namespace common
         const char *g_instance_name = nullptr;
         int g_restart_after_failures = 0;
 
+        // Decision logic lives in lib/logic (natively tested); this handler
+        // only executes the side effects.
+        static logic::WifiRecovery recovery;
+
         /// WiFi recovery: try reconnect first, hard-restart only after
-        /// g_restart_after_failures consecutive failures (every failed attempt
-        /// fires another DISCONNECTED event, so the counter keeps growing
-        /// until GOT_IP resets it). Register AFTER the initial connect: failed
-        /// connect attempts during boot also fire DISCONNECTED events.
+        /// g_restart_after_failures consecutive failures. Register AFTER the
+        /// initial connect: failed connect attempts during boot also fire
+        /// DISCONNECTED events.
         void onWiFiEvent(WiFiEvent_t event)
         {
-            static int disconnectCount = 0;
             switch (event)
             {
             case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-                disconnectCount = 0;
+                recovery.onGotIp();
                 Serial.print("WiFi connected, IP: ");
                 Serial.println(WiFi.localIP());
                 setupMDNS(g_mdns_hostname, g_instance_name);
                 break;
             case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-                disconnectCount++;
-                if (g_restart_after_failures > 0 && disconnectCount >= g_restart_after_failures)
+                if (recovery.onDisconnected(g_restart_after_failures) == logic::WifiAction::Restart)
                 {
                     // last resort - reset EVERYTHING
-                    debug_tools::logMessage("WiFi reconnect failed %d times. Restarting controller...", disconnectCount);
+                    debug_tools::logMessage("WiFi reconnect failed %d times. Restarting controller...", recovery.failures());
                     delay(100); // let serial flush; no long delay, this blocks the system event task
                     ESP.restart();
                 }
-                Serial.printf("WiFi disconnected. Try reconnect again (%d)...\n", disconnectCount);
+                Serial.printf("WiFi disconnected. Try reconnect again (%d)...\n", recovery.failures());
                 WiFi.reconnect();
                 break;
             default:

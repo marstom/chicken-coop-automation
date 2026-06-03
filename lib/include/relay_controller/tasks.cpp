@@ -8,6 +8,7 @@
 #include "esp_task_wdt.h"
 #include "mqtt_comm.h"
 #include "secrets.h"
+#include "door_auth.h"
 #include "debug_tools/debug_tools.h"
 #include "ble.h"
 #include <ArduinoBLE.h>
@@ -29,21 +30,10 @@ namespace relay_controller
 
     /// Door TCP endpoint only answers "GET /open?token=<DOOR_TOKEN>".
     /// A token left at "unset" disables the endpoint.
+    /// Thin wrapper - the decision logic lives in lib/logic (natively tested).
     static bool isAuthorizedDoorRequest(const String &requestLine)
     {
-        const char *prefix = "GET /open?token=";
-        if (strcmp(DOOR_TOKEN, "unset") == 0 || !requestLine.startsWith(prefix))
-        {
-            return false;
-        }
-        int tokenEnd = requestLine.indexOf(' ', strlen(prefix));
-        if (tokenEnd < 0)
-        {
-            tokenEnd = requestLine.length();
-        }
-        String token = requestLine.substring(strlen(prefix), tokenEnd);
-        token.trim();
-        return token == DOOR_TOKEN;
+        return logic::isAuthorizedDoorRequest(requestLine.c_str(), DOOR_TOKEN);
     }
 
     // direct tcp

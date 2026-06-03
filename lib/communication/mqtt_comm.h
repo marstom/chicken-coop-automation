@@ -2,6 +2,7 @@
 #pragma once
 
 #include "mqtt_client.h"
+#include "bounded_copy.h"
 
 namespace communication
 {
@@ -44,10 +45,8 @@ namespace communication
         /// Copy topic and payload into the internal fixed-size buffers.
         void setContent(const char *t, const char *msg)
         {
-            strncpy(topic, t, sizeof(topic));
-            topic[sizeof(topic) - 1] = '\0';
-            strncpy(payload, msg, sizeof(payload));
-            payload[sizeof(payload) - 1] = '\0';
+            logic::copyBounded(topic, sizeof(topic), t);
+            logic::copyBounded(payload, sizeof(payload), msg);
         }
 
         /// Queue this message for the MQTT task to publish later.
@@ -78,11 +77,8 @@ namespace communication
 
         void setContent(const char *messageType, const char *msg)
         {
-            strncpy(buffer, msg, sizeof(buffer));
-            buffer[sizeof(buffer) - 1] = '\0';
-
-            strncpy(msgType, messageType, sizeof(msgType));
-            msgType[sizeof(msgType) - 1] = '\0';
+            logic::copyBounded(buffer, sizeof(buffer), msg);
+            logic::copyBounded(msgType, sizeof(msgType), messageType);
         }
 
         char *getBuffer()
