@@ -1,64 +1,86 @@
 #include "common/mqtt.h"
 
+#include <WiFi.h>
+#include "esp_task_wdt.h"
+
 #include "debug_tools/debug_tools.h"
 #include "mqtt_comm.h"
 
 namespace common::mqtt
 {
-
-    Mqtt::Mqtt(PubSubClient &mqttClient) : client(mqttClient)
+    bool connectToBroker(PubSubClient &client, const char *user, const char *pass, const char *thingName)
     {
-        debug_tools::logMessage("Mqtt constructor");
-    }
-
-    Mqtt::~Mqtt()
-    {
-        debug_tools::logMessage("Mqtt destructor");
-    }
-
-    void Mqtt::addCallback(MessageCallback callback)
-    {
-        client.setCallback(callback);
-    }
-
-    void Mqtt::setupAndConnect(
-        ConnectFn connectToBroker,
-        const char *host,
-        uint16_t port,
-        const char *subscribeTopic,
-        const char *statusTopic,
-        const char *statusPayload)
-    {
-
-        client.setServer(host, port);
-
-        while (!client.connected())
+        if (user != nullptr && user[0] != '\0')
         {
-            if (connectToBroker())
-            {
-                debug_tools::logMessage("☑ Connected to MQTT broker!");
-                client.subscribe(subscribeTopic);
-
-                communication::MqttMessage msg;
-                msg.setContent(statusTopic, statusPayload);
-                msg.sendToQueue();
-            }
-            else
-            {
-                debug_tools::logMessage("✖ Failed to connect, try again in 2 seconds, rc=");
-                debug_tools::logMessage("%d", client.state());
-                delay(2000);
-            }
+            return client.connect(thingName, user, pass);
         }
-    }
-
-    bool Mqtt::connectToMqttBroker(const char *mqttUser, const char *mqttPass, const char *thingName)
-    {
-        if (mqttUser[0] != '\0')
-        {
-            return client.connect(thingName, mqttUser, mqttPass);
-        }
-
         return client.connect(thingName);
+    }
+
+    static void onConnected(const TaskConfig &cfg)
+    {
+        debug_tools::logMessage("☑ Connected to MQTT broker!");
+        if (cfg.subscribeTopic != nullptr)
+        {
+            cfg.client->subscribe(cfg.subscribeTopic);
+        }
+        if (cfg.statusTopic != nullptr)
+        {
+            cfg.client->publish(cfg.statusTopic, cfg.statusPayload);
+        }
+    }
+
+    void taskMQTT(void *pvParameters)
+    {
+        const TaskConfig &cfg = *static_cast<const TaskConfig *>(pvParameters);
+        PubSubClient &client = *cfg.client;
+
+        esp_task_wdt_add(NULL); // watchdog
+        TickType_t lastReconnectAttempt = 0;
+        TickType_t lastWifiOk = xTaskGetTickCount();
+
+        for (;;)
+        {
+            const TickType_t now = xTaskGetTickCount();
+            if (WiFi.status() == WL_CONNECTED)
+            {
+                lastWifiOk = now;
+                if (!client.connected())
+                {
+                    // WiFi drop kills the broker socket; reconnect and re-subscribe
+                    if (now - lastReconnectAttempt >= pdMS_TO_TICKS(2000))
+                    {
+                        lastReconnectAttempt = now;
+                        if (connectToBroker(client, cfg.user, cfg.pass, cfg.thingName))
+                        {
+                            onConnected(cfg);
+                        }
+                        else
+                        {
+                            debug_tools::logMessage("✖ MQTT connect failed, rc=%d", client.state());
+                        }
+                    }
+                }
+                else
+                {
+                    client.loop(); // <--- processes incoming MQTT messages
+                }
+            }
+            else if (now - lastWifiOk >= pdMS_TO_TICKS(30000))
+            {
+                // safety net: WiFi stuck down and event-driven reconnect didn't recover
+                debug_tools::logMessage("WiFi down >30s, forcing reconnect");
+                WiFi.reconnect();
+                lastWifiOk = now;
+            }
+
+            communication::MqttMessage msg;
+            if (client.connected() && xQueueReceive(communication::mqttQueue, &msg, 0))
+            {
+                client.publish(msg.topic, msg.payload);
+            }
+            esp_task_wdt_reset(); // reset watchdog
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
     }
 }

@@ -39,11 +39,12 @@ build_flags =
 #ifndef MQTT_PASS
 #define MQTT_PASS "admin"
 #endif
-
-/// Alternative - namespace
-// namespace secrets {
-//     const char* wifiSsidOffice = WIFI_SSID_OFFICE;
-//     const char* wifiSsidKitchen = WIFI_SSID;
-//     const char* wifiSsidGarden = WIFI_SSID;
-//     const char* wifiPass = WIFI_PASS;
-// }
+// Token required by the door TCP endpoint (GET /open?token=...).
+// "unset" disables the endpoint entirely.
+#ifndef DOOR_TOKEN
+#define DOOR_TOKEN "unset"
+#endif
+// Password required over BLE to open the door. "unset" disables BLE open.
+#ifndef BLE_DOOR_PASS
+#define BLE_DOOR_PASS "unset"
+#endif

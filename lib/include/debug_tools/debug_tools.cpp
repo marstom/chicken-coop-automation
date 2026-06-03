@@ -44,13 +44,14 @@ void logMessage(const LogOptions &options, const char *fmt, ...)
     va_end(args);
 }
 
-void printStackInfo(const char *taskName, TaskHandle_t mqttTaskHandler)
+void printStackInfo(const char *taskName, TaskHandle_t taskHandle)
 {
-    if (mqttTaskHandler)
+    if (taskHandle)
     {
-        logMessage("MQTTTask stack free: %u words (%u bytes)\n",
-                   uxTaskGetStackHighWaterMark(mqttTaskHandler),
-                   uxTaskGetStackHighWaterMark(mqttTaskHandler) * 4);
+        logMessage("%s stack free: %u words (%u bytes)\n",
+                   taskName,
+                   uxTaskGetStackHighWaterMark(taskHandle),
+                   uxTaskGetStackHighWaterMark(taskHandle) * 4);
     }
 }
 
@@ -62,6 +63,20 @@ void printHeap()
                             info.total_free_bytes,
                             info.minimum_free_bytes,
                             info.largest_free_block);
+}
+
+void taskStackMonitor(void *pvParameters)
+{
+    const MonitoredTask *tasks = static_cast<const MonitoredTask *>(pvParameters);
+    for (;;)
+    {
+        for (const MonitoredTask *t = tasks; t->name != nullptr; ++t)
+        {
+            printStackInfo(t->name, *t->handle);
+        }
+        printHeap(); // DEBUG memory leaks
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
 }
 
 }

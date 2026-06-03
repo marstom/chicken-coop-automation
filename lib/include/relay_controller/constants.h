@@ -13,6 +13,8 @@ namespace relay_controller
     inline constexpr int WDT_TIMEOUT = 30;
 
     inline constexpr uint8_t RELAY_PIN = D0;
+    // How long the door relay stays energized per open command.
+    inline constexpr uint32_t DOOR_OPEN_MS = 6000;
 
     // MQTT stuff.
     inline constexpr const char *THINGNAME = "esp32-c3-basement-fhs232y3a43";

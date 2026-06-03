@@ -51,12 +51,13 @@ namespace communication
         }
 
         /// Queue this message for the MQTT task to publish later.
-        /// `timeout_ms` is currently unused; this call blocks with `portMAX_DELAY`.
+        /// Waits at most `timeout_ms`; the message is dropped if the queue
+        /// stays full (never block a sensor task on a slow/dead broker).
         void sendToQueue(uint32_t timeout_ms = 10)
         {
             if (!mqttQueue)
                 return; // guard
-            xQueueSend(mqttQueue, this, portMAX_DELAY);
+            xQueueSend(mqttQueue, this, pdMS_TO_TICKS(timeout_ms));
         }
     };
 
@@ -81,6 +82,7 @@ namespace communication
             buffer[sizeof(buffer) - 1] = '\0';
 
             strncpy(msgType, messageType, sizeof(msgType));
+            msgType[sizeof(msgType) - 1] = '\0';
         }
 
         char *getBuffer()

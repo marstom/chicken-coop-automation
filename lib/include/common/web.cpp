@@ -3,6 +3,8 @@
 #include <ESPmDNS.h>
 #include <WiFi.h>
 
+#include "debug_tools/debug_tools.h"
+
 // set hostname for my chickenCOOP server
 // @param hostname - name of hot chicken it would be chicken.local
 // @param instance_name - "Chicken Coop"
@@ -12,6 +14,10 @@ namespace common
 
     void setupMDNS(const char *hostname, const char *instance_name)
     {
+        if (hostname == nullptr || instance_name == nullptr)
+        {
+            return;
+        }
         // GOT_IP fires on every WiFi reconnect; mDNS survives reconnects and
         // re-announces on its own, so only initialize once
         static bool mdnsStarted = false;
@@ -47,32 +53,41 @@ namespace common
         mdnsStarted = true;
     }
 
-    // HARD reset on WIFi disconnect
-    // TODO, try which is better reconnect pattern, or full restart pattern?
-
     namespace wifi_event
     {
         // cpp way, cpp not allow nested function, like wrapper pattern in python...
         const char *g_mdns_hostname = nullptr;
         const char *g_instance_name = nullptr;
+        int g_restart_after_failures = 0;
+
+        /// WiFi recovery: try reconnect first, hard-restart only after
+        /// g_restart_after_failures consecutive failures (every failed attempt
+        /// fires another DISCONNECTED event, so the counter keeps growing
+        /// until GOT_IP resets it). Register AFTER the initial connect: failed
+        /// connect attempts during boot also fire DISCONNECTED events.
         void onWiFiEvent(WiFiEvent_t event)
         {
+            static int disconnectCount = 0;
             switch (event)
             {
             case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+                disconnectCount = 0;
                 Serial.print("WiFi connected, IP: ");
                 Serial.println(WiFi.localIP());
                 setupMDNS(g_mdns_hostname, g_instance_name);
                 break;
             case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-                Serial.println("WiFi disconnected. Try reconnect again...");
+                disconnectCount++;
+                if (g_restart_after_failures > 0 && disconnectCount >= g_restart_after_failures)
+                {
+                    // last resort - reset EVERYTHING
+                    debug_tools::logMessage("WiFi reconnect failed %d times. Restarting controller...", disconnectCount);
+                    delay(100); // let serial flush; no long delay, this blocks the system event task
+                    ESP.restart();
+                }
+                Serial.printf("WiFi disconnected. Try reconnect again (%d)...\n", disconnectCount);
                 WiFi.reconnect();
                 break;
-            // case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-            //     debug_tools::logMessage("WiFi disconnected. Restarting controller...");
-            //     delay(3000);
-            //     ESP.restart();
-            //     break;
             default:
                 break;
             }

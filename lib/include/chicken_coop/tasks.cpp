@@ -1,69 +1,16 @@
 #include <mqtt_comm.h>
 #include <esp_task_wdt.h>
 #include <Wire.h>
-#include <WiFi.h>
 #include "debug_tools/debug_tools.h"
 
 #include "chicken_coop/tasks.h"
 #include "chicken_coop/constants.h"
 #include "chicken_coop/protocols.h"
-#include "secrets.h"
-
-extern TaskHandle_t hMQTTTask;
-extern TaskHandle_t hBME280Task;
 
 namespace chicken_coop
 {
 
 PubSubClient client(chicken_coop::net);
-
-// MQTT loop task
-void taskMQTT(void *pvParameters)
-{
-    esp_task_wdt_add(NULL); // watchdog
-    TickType_t lastReconnectAttempt = 0;
-    TickType_t lastWifiOk = xTaskGetTickCount();
-
-    for (;;)
-    {
-        const TickType_t now = xTaskGetTickCount();
-        if (WiFi.status() == WL_CONNECTED)
-        {
-            lastWifiOk = now;
-            if (!client.connected())
-            {
-                if (now - lastReconnectAttempt >= pdMS_TO_TICKS(2000))
-                {
-                    lastReconnectAttempt = now;
-                    if (chicken_coop::connectToMqttBroker())
-                    {
-                        client.subscribe(RELAY_1_SET_TOPIC);
-                        debug_tools::logMessage("MQTT reconnected");
-                    }
-                }
-            }
-            else
-            {
-                client.loop(); // <--- processes incoming MQTT messages
-            }
-        }
-        else if (now - lastWifiOk >= pdMS_TO_TICKS(30000))
-        {
-            // safety net: WiFi stuck down and no DISCONNECTED event recovered it
-            debug_tools::logMessage("WiFi down >30s, forcing reconnect");
-            WiFi.reconnect();
-            lastWifiOk = now;
-        }
-
-        communication::MqttMessage msg;
-        if (xQueueReceive(communication::mqttQueue, &msg, 0))
-        {
-            client.publish(msg.topic, msg.payload);
-        }
-        esp_task_wdt_reset(); // reset watchdog
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-}
 
 /// @brief Temperature sensor
 /// @param pvParameters
@@ -142,21 +89,6 @@ void taskAmoniaSensor(void *pvParameters){
 }
 
 
-// --- New task: device monitoring, for troubleshooting ---
-void taskStackMonitor(void *pvParameters)
-{
-    for (;;)
-    {
-        if constexpr (ENABLE_MONITORING)
-        {
-            debug_tools::printStackInfo("MQTTTask", ::hMQTTTask);
-            debug_tools::printStackInfo("BME280Task", ::hBME280Task);
-            debug_tools::printHeap(); // DEBUG memory leaks
-        }
-        vTaskDelay(pdMS_TO_TICKS(5000)); // print every 10s
-    }
-}
-
 void taskWebServer(void *pvParameters)
 {
     for (;;)
@@ -164,15 +96,5 @@ void taskWebServer(void *pvParameters)
         chicken_coop::webServer.handleClient();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-}
-
-bool connectToMqttBroker()
-{
-    if (MQTT_USER[0] != '\0')
-    {
-        return client.connect(THINGNAME, MQTT_USER, MQTT_PASS);
-    }
-
-    return client.connect(THINGNAME);
 }
 }
