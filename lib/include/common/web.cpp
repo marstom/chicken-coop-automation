@@ -12,6 +12,13 @@ namespace common
 
     void setupMDNS(const char *hostname, const char *instance_name)
     {
+        // GOT_IP fires on every WiFi reconnect; mDNS survives reconnects and
+        // re-announces on its own, so only initialize once
+        static bool mdnsStarted = false;
+        if (mdnsStarted)
+        {
+            return;
+        }
 
         // initialize mDNS service
         esp_err_t err = mdns_init();
@@ -37,6 +44,7 @@ namespace common
         mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
         mdns_service_add(NULL, "_ota", "_tcp", 3232, NULL, 0);
         mdns_service_add(NULL, "mqtt", "_tcp", 1883, NULL, 0);
+        mdnsStarted = true;
     }
 
     // HARD reset on WIFi disconnect

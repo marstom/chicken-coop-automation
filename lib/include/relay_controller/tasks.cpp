@@ -6,9 +6,11 @@
 #include "freertos/task.h"
 #include <HTTPClient.h>
 #include <PubSubClient.h>
+#include <WiFi.h>
 #include <WiFiUdp.h>
 #include "esp_task_wdt.h"
 #include "mqtt_comm.h"
+#include "secrets.h"
 #include "debug_tools/debug_tools.h"
 #include "ble.h"
 #include <ArduinoBLE.h>
@@ -33,13 +35,13 @@ namespace relay_controller
     {
         WiFiServer server(80); // http
         server.begin();
+        esp_task_wdt_add(NULL); // subscribe once; must be fed every iteration, not only on requests
 
         for (;;)
         {
             WiFiClient client = server.available();
             if (client)
             {
-                esp_task_wdt_add(NULL);
                 String req = client.readStringUntil('\n');
                 Serial.println(req);
 
@@ -53,8 +55,8 @@ namespace relay_controller
                 client.stop();
                 vTaskDelay(pdMS_TO_TICKS(6000));
                 digitalWrite(RELAY_PIN, HIGH);
-                esp_task_wdt_reset();
             }
+            esp_task_wdt_reset();
             vTaskDelay(pdMS_TO_TICKS(250)); // yield
         }
     }
@@ -122,13 +124,54 @@ namespace relay_controller
         }
     }
 
+    static bool connectToMqttBroker()
+    {
+        if (MQTT_USER[0] != '\0')
+        {
+            return client.connect(THINGNAME, MQTT_USER, MQTT_PASS);
+        }
+        return client.connect(THINGNAME);
+    }
+
     // MQTT loop task
     void taskMQTT(void *pvParameters)
     {
         esp_task_wdt_add(NULL);
+        TickType_t lastReconnectAttempt = 0;
+        TickType_t lastWifiOk = xTaskGetTickCount();
+
         for (;;)
         {
-            client.loop(); // <--- processes incoming MQTT messages
+            const TickType_t now = xTaskGetTickCount();
+            if (WiFi.status() == WL_CONNECTED)
+            {
+                lastWifiOk = now;
+                if (!client.connected())
+                {
+                    // WiFi drop kills the broker socket; reconnect and re-subscribe
+                    if (now - lastReconnectAttempt >= pdMS_TO_TICKS(2000))
+                    {
+                        lastReconnectAttempt = now;
+                        if (connectToMqttBroker())
+                        {
+                            client.subscribe(RELAY_1_SET_TOPIC);
+                            debug_tools::logMessage("MQTT reconnected");
+                        }
+                    }
+                }
+                else
+                {
+                    client.loop(); // <--- processes incoming MQTT messages
+                }
+            }
+            else if (now - lastWifiOk >= pdMS_TO_TICKS(30000))
+            {
+                // safety net: WiFi stuck down and event-driven reconnect didn't recover
+                debug_tools::logMessage("WiFi down >30s, forcing reconnect");
+                WiFi.reconnect();
+                lastWifiOk = now;
+            }
+
             communication::MqttMessage msg;
             if (xQueueReceive(communication::mqttQueue, &msg, 0))
             {

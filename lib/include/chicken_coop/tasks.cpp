@@ -22,14 +22,16 @@ void taskMQTT(void *pvParameters)
 {
     esp_task_wdt_add(NULL); // watchdog
     TickType_t lastReconnectAttempt = 0;
+    TickType_t lastWifiOk = xTaskGetTickCount();
 
     for (;;)
     {
+        const TickType_t now = xTaskGetTickCount();
         if (WiFi.status() == WL_CONNECTED)
         {
+            lastWifiOk = now;
             if (!client.connected())
             {
-                const TickType_t now = xTaskGetTickCount();
                 if (now - lastReconnectAttempt >= pdMS_TO_TICKS(2000))
                 {
                     lastReconnectAttempt = now;
@@ -44,6 +46,13 @@ void taskMQTT(void *pvParameters)
             {
                 client.loop(); // <--- processes incoming MQTT messages
             }
+        }
+        else if (now - lastWifiOk >= pdMS_TO_TICKS(30000))
+        {
+            // safety net: WiFi stuck down and no DISCONNECTED event recovered it
+            debug_tools::logMessage("WiFi down >30s, forcing reconnect");
+            WiFi.reconnect();
+            lastWifiOk = now;
         }
 
         communication::MqttMessage msg;

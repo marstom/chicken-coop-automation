@@ -49,28 +49,31 @@ void setupMDNS(const char *hostname)
 }
 
 
-/// @brief Here I handled with reconnect, in relay controller, hard-reset
-// Experiment with 2 approaches
-/// @param event 
+/// @brief WiFi recovery: try reconnect first, hard-restart only after several
+/// consecutive failures. Every failed reconnect attempt fires another
+/// DISCONNECTED event, so the counter keeps growing until GOT_IP resets it.
+/// Restarting on the very first disconnect caused boot loops / outages on
+/// transient AP glitches.
+/// @param event
 void onWiFiEvent(WiFiEvent_t event)
 {
+    static int disconnectCount = 0;
     switch (event)
     {
-    // case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    //     Serial.print("WiFi connected, IP: ");
-    //     Serial.println(WiFi.localIP());
-    //     setupMDNS(MDNS_HOSTNAME);
-    //     break;
-    // case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-    //     Serial.println("WiFi disconnected. Try reconnect again...");
-    //     WiFi.reconnect();
-    //     break;
-
-    /// very harsh approach - reset EVERYTHING 
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+        disconnectCount = 0;
+        break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        debug_tools::logMessage("WiFi disconnected. Restarting controller...");
-        delay(3000);
-        ESP.restart();
+        disconnectCount++;
+        if (disconnectCount >= 5)
+        {
+            // last resort - reset EVERYTHING
+            debug_tools::logMessage("WiFi reconnect failed %d times. Restarting controller...", disconnectCount);
+            delay(100); // let serial flush; no long delay here, this blocks the system event task
+            ESP.restart();
+        }
+        debug_tools::logMessage("WiFi disconnected. Try reconnect again (%d/5)...", disconnectCount);
+        WiFi.reconnect();
         break;
     default:
         break;
