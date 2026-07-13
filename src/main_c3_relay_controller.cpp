@@ -61,7 +61,9 @@ void setup()
     } // wait a moment for usb
     debug_tools::logPrefix = relay_controller::PREFIX;
 
-    common::connectToWifiWithWait(SSID_OFFICE, WIFI_PASS, "basement");
+    // Modem sleep must stay enabled: this target runs BLE alongside WiFi and
+    // the C3 coexistence layer aborts at BLE.begin() when sleep is disabled.
+    common::connectToWifiWithWait(SSID_OFFICE, WIFI_PASS, "basement", /*disableModemSleep=*/false);
     common::wifi_event::g_instance_name = "Relay Controller";
     common::wifi_event::g_mdns_hostname = relay_controller::MDNS_HOSTNAME;
     // Register AFTER the initial connect: failed connect attempts during boot
@@ -80,7 +82,7 @@ void setup()
     debug_tools::logMessage("Initialize watchdog");
     esp_task_wdt_init(relay_controller::WDT_TIMEOUT, true);
 
-    common::ota::setup("esp32c3"); // must match upload_port in platformio.ini
+    common::ota::setup(relay_controller::MDNS_HOSTNAME); // must match upload_port in platformio.ini
 
     communication::initQueue();
     // main mqtt task

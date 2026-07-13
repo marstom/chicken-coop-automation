@@ -42,9 +42,9 @@ build_flags =
 // Token required by the door TCP endpoint (GET /open?token=...).
 // "unset" disables the endpoint entirely.
 #ifndef DOOR_TOKEN
-#define DOOR_TOKEN "unset"
+#define DOOR_TOKEN "paulina"
 #endif
 // Password required over BLE to open the door. "unset" disables BLE open.
 #ifndef BLE_DOOR_PASS
-#define BLE_DOOR_PASS "unset"
+#define BLE_DOOR_PASS "paulina"
 #endif
