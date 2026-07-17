@@ -19,6 +19,7 @@ This is door lock in my basement. BLE controlled plus WiFi controlled
 #include "relay_controller/constants.h"
 #include "relay_controller/tasks.h"
 #include "relay_controller/ble.h"
+#include "relay_controller/rfid_board.h"
 #include "common/mqtt.h"
 #include "common/ota.h"
 #include "common/web.h"
@@ -89,6 +90,7 @@ void setup()
     xTaskCreatePinnedToCore(common::mqtt::taskMQTT, "taskMQTT", 2048 * 4, &mqttConfig, 1, &hMQTTTask, 0);
     // hardware sensors tasks
     xTaskCreate(relay_controller::taskRelay, "taskRelay", 4096, NULL, 1, &hRelayTask);
+    relay_controller::setupRfid();
 
     relay_controller::setupBLE("Piwnica", "Drzwi w piwnicy");
 
