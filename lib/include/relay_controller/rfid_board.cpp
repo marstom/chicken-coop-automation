@@ -63,18 +63,11 @@ namespace relay_controller
         }
     }
 
-    bool setupRfid(int8_t sdaPin, int8_t sclPin)
+    bool setupRfid(uint8_t sdaPin, uint8_t sclPin)
     {
         Serial.println("PN532 NFC/RFID Reader - I2C setup");
 
-        if (sdaPin >= 0 && sclPin >= 0)
-        {
-            Wire.begin(sdaPin, sclPin);
-        }
-        else
-        {
-            Wire.begin();
-        }
+        Wire.begin(sdaPin, sclPin);
 
         nfc.begin();
         const uint32_t versiondata = nfc.getFirmwareVersion();
