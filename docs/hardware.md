@@ -38,9 +38,25 @@ WIP
 
 # breadboard
 
-Here’s what the board looks like:
+Here's what the board looks like:
 
 ![ESP32-C3 board](bread_board.jpg)
+![ESP32-C3 board pins](c3.jpeg)
+
+
+```
+          USB-C
+       ┌───────────┐
+GPIO2  │ D0 / A0   │  5V
+GPIO3  │ D1 / A1   │  GND
+GPIO4  │ D2 / A2   │  3V3
+GPIO5  │ D3 / A3   │  D10 / GPIO10 / MOSI
+GPIO6  │ D4 / SDA  │  D9  / GPIO9  / MISO
+GPIO7  │ D5 / SCL  │  D8  / GPIO8  / SCK
+GPIO21 │ D6 / TX   │  D7  / GPIO20 / RX
+       └───────────┘
+
+```
 
 
 ## schematics
