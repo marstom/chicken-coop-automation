@@ -4,3 +4,4 @@ nav:
   - Hardware: hardware.md
   - Setup: setup.md
   - How to: howto.md
+  - Relay controller: relay_controller.md
