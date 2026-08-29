@@ -33,8 +33,15 @@ SCL - D5
 WIP
 
 
+### RFID
 
+NFC PN532 13,56MHz I2C/SPI
 
+[The botland page](https://botland.com.pl/moduly-i-tagi-rfid/8240-modul-rfidnfc-pn532-1356mhz-i2cspi-karta-i-brelok-5904422375775.html)
+
+[spec in pdf](specs/PN532 NFC RFID Module Manual.pdf)
+
+ESP32 it needs 3.3v power supply
 
 # breadboard
 

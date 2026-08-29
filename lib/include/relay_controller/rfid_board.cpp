@@ -20,6 +20,9 @@ namespace relay_controller
             "198e93",
             "146c9f",
             "42f8d12e95b80",
+            "01046c9f", // card 1
+            "026e00c1944020", // card 2
+            "01098e93", // card 3
         };
 
         String uidToString(const uint8_t *uid, uint8_t uidLength)
