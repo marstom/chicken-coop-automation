@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
+  "name": "HelloWorld",
+  "version": "0.1.0",
+  "description": "A minimal hello-world library for PlatformIO projects.",
+  "keywords": [
+    "hello-world",
+    "example"
+  ],
+  "license": "MIT",
+  "frameworks": [
+    "arduino"
+  ],
+  "platforms": [
+    "espressif32"
+  ],
+  "headers": [
+    "hello_world.h"
+  ]
+}
