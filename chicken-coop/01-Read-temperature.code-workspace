@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "library-usage",
+			"path": "../lib-usage-example/library-usage"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.page-template": "vue",
+			"*.layout-template": "vue",
+			"*.vue": "vue",
+			"istream": "cpp",
+			"ostream": "cpp"
+		}
+	}
+}
