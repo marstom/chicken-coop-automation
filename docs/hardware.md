@@ -11,6 +11,13 @@
 
 [Instruction ESP32 C3 in PDF](specs/Seeed-Studio.pdf)
 
+## esp32-s3-devkitm-1
+
+- [Board - botland](https://botland.com.pl/produkty-wycofane/20740-esp32-s3-devkitm-1-n8-wifi-bluetooth-mini-plytka-rozwojowa-z-ukladem-esp32-s3-mini-11u-5904422382360.html)
+- [Espresiff docs](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitm-1/index.html)
+
+![piny](images/ESP32-S3_DevKitM-1_pinlayout.jpg)
+
 ## Component docs
 
 ### Relay

@@ -5,3 +5,4 @@ nav:
   - Setup: setup.md
   - How to: howto.md
   - Relay controller: relay_controller.md
+  - Ventilation: ventilation_temperature_controller.md

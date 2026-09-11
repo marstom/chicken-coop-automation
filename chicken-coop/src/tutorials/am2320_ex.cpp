@@ -1,28 +1,29 @@
 /*
 Exampe usage of temperature and humidity sensor AM2320
 */
-#include "Adafruit_Sensor.h"
-#include "Adafruit_AM2320.h"
-
-Adafruit_AM2320 am2320 = Adafruit_AM2320();
-
-
+#include "common/am2320/am2320.h"
+#include "driver/gpio.h"
 // PINS for i2c
 
-
-void setup() {
+void setup()
+{
   Serial.begin(9600);
-  while (!Serial) {
+  while (!Serial)
+  {
     delay(10); // hang out until serial port opens
   }
 
   Serial.println("Adafruit AM2320 Basic Test");
-  am2320.begin();
+  my_am2320::init();
+  int p = GPIO_NUM_2;
 }
 
-void loop() {
-  Serial.print("Temp: "); Serial.println(am2320.readTemperature());
-  Serial.print("Hum: "); Serial.println(am2320.readHumidity());
+void loop()
+{
+  Serial.print("Temp: ");
+  Serial.println(my_am2320::measure_temperature());
+  Serial.print("Hum: ");
+  Serial.println(my_am2320::measure_humidity());
 
   delay(2000);
 }
