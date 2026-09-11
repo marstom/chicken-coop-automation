@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <driver/gpio.h>
 
 namespace chicken_coop
 {
@@ -12,17 +13,17 @@ namespace chicken_coop
     inline constexpr uint8_t LED_PIN = 48;
     inline constexpr int WDT_TIMEOUT = 30;
 
-    inline constexpr uint8_t RELAY_PIN = D0;
+    inline constexpr uint8_t RELAY_PIN = GPIO_NUM_2; // D0
 
     // BME temperature and humidity sensor, connected to i2c bus in current setup.
-    inline constexpr uint8_t BME_SCK = D8;
-    inline constexpr uint8_t BME_MISO = D9;
-    inline constexpr uint8_t BME_MOSI = D10;
-    inline constexpr uint8_t BME_CS = D7;
+    inline constexpr uint8_t BME_SCK = GPIO_NUM_8;   // D8
+    inline constexpr uint8_t BME_MISO = GPIO_NUM_9;  // D9
+    inline constexpr uint8_t BME_MOSI = GPIO_NUM_10; // D10
+    inline constexpr uint8_t BME_CS = GPIO_NUM_20;   // D7
 
-    inline constexpr uint8_t I2C_SDA = D4;
-    inline constexpr uint8_t I2C_SCL = D5;
-    inline constexpr uint8_t AMONIA_SENSOR_PIN = A0;
+    inline constexpr uint8_t I2C_SDA = GPIO_NUM_6; // D4
+    inline constexpr uint8_t I2C_SCL = GPIO_NUM_7; // D5
+    inline constexpr uint8_t AMONIA_SENSOR_PIN = GPIO_NUM_2; // A0
     inline constexpr uint32_t AMONIA_SENSOR_READ_INTERVAL_MS = 1000;
 
     inline constexpr float SEALEVELPRESSURE_HPA = 1013.25F;

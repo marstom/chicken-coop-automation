@@ -1,9 +1,10 @@
 
 #pragma once
 #include <Arduino.h>
+#include <driver/gpio.h>
 
-// #define I2C_SDA D4
-// #define I2C_SCL D5
+// #define I2C_SDA GPIO_NUM_6 // D4
+// #define I2C_SCL GPIO_NUM_7 // D5
 
 namespace relay_controller
 {
@@ -12,7 +13,7 @@ namespace relay_controller
     inline constexpr bool ENABLE_MONITORING = false;
     inline constexpr int WDT_TIMEOUT = 30;
 
-    inline constexpr uint8_t RELAY_PIN = D0;
+    inline constexpr uint8_t RELAY_PIN = GPIO_NUM_0; // D0
     // How long the door relay stays energized per open command.
     inline constexpr uint32_t DOOR_OPEN_MS = 6000;
 
