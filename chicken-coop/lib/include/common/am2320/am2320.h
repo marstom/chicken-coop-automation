@@ -17,7 +17,7 @@ Adafruit_AM2320 am2320 = Adafruit_AM2320();
 // #define SCL_PIN xx
 namespace my_am2320
 {
-    void init()
+    void init(const int sdaPin = SDA_PIN, const int sclPin = SCL_PIN)
     {
         Wire.begin(SDA_PIN, SCL_PIN);
 
