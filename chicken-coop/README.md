@@ -23,17 +23,7 @@ Both nodes connect to WiFi, publish diagnostics over MQTT, and support OTA firmw
 
 ## Configuration
 
-Create `secret.ini` in the project root (it is gitignored):
-
-```ini
-[secret]
-build_flags =
-  -DWIFI_SSID=\"<your-ssid>\"
-  -DWIFI_PASS=\"<your-password>\"
-  -DMQTT_HOST=\"<broker-ip>\"
-  -DMQTT_PORT=1883
-  -DDOOR_TOKEN=\"<secret-token>\"
-```
+Create `secrets_local.h` in `lib/secrets/` with your WiFi and MQTT credentials. Example is in `lib/secrets/secrets_local.example.h`.
 
 ---
 

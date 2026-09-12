@@ -11,3 +11,4 @@ secret.ini
 site/
 
 *.db
+lib/secrets/secrets_local.h
