@@ -38,9 +38,9 @@ unsigned long delayTime;
 #define RELAY_2_TOPIC_W "relay/4/write"
 
 // My rasberry pi server name
-const char *host = "raspberr ypi.local";
+const char *host = "raspberrypi.local";
 WiFiClient net;
-PubSubC lient client(net);
+PubSubClient client(net);
 
 // put function declarations here:
 void taskHandleRGBLed(void *pvParameters);

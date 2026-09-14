@@ -12,3 +12,5 @@ site/
 
 *.db
 lib/secrets/secrets_local.h
+
+aws_ventilation_secrets/
