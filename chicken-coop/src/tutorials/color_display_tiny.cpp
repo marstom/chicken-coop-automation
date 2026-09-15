@@ -3,6 +3,10 @@
 #include <Adafruit_SSD1306.h>
 #include <driver/gpio.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include "common/am2320/am2320.h"
+
 #define SDA_PIN GPIO_NUM_1
 #define SCL_PIN GPIO_NUM_2
 
@@ -19,6 +23,8 @@ Adafruit_SSD1306 display(
 int positionX = 0;
 int positionY = 0;
 
+void taskDisplay(void *pvParameters);
+
 void setup() {
     Serial.begin(115200);
 
@@ -33,29 +39,49 @@ void setup() {
 
     display.setTextColor(SSD1306_WHITE);
     display.setTextSize(2);
-    display.println("Hello!");
-    display.setCursor(1, 15);
-    display.println("WORLD!");
-    display.setCursor(1, 45);
-    display.println("Hej!");
-
-
+    // display.println("Hello!");
+    // display.setCursor(1, 15);
+    // display.println("WORLD!");
+    // display.setCursor(1, 45);
+    // display.println("Hej!");
     display.display();
+
+    xTaskCreate(taskDisplay, "taskDisplay", 4096, NULL, 1, NULL);
 }
 
 void loop() {
-    display.clearDisplay();
-    positionX += 1;
-    positionY += 1;
-    display.setCursor(positionX, positionY);
-    display.println("Tomek");
-    display.display();
-    // delay(80);
+    // display.clearDisplay();
+    // positionX += 1;
+    // positionY += 1;
+    // display.setCursor(positionX, positionY);
+    // display.println("Tomek");
+    // display.display();
+    // // delay(80);
 
-    if (positionX > SCREEN_WIDTH) {
-        positionX = 0;
-    }
-    if (positionY > SCREEN_HEIGHT) {
-        positionY = 0;
+    // if (positionX > SCREEN_WIDTH) {
+    //     positionX = 0;
+    // }
+    // if (positionY > SCREEN_HEIGHT) {
+    //     positionY = 0;
+    // }
+}
+
+
+void taskDisplay(void *pvParameters) {
+    while (true) {
+        display.clearDisplay();
+        positionX += 1;
+        positionY += 1;
+        display.setCursor(positionX, positionY);
+        display.println("Tomek");
+        display.display();
+        delay(50);
+
+        if (positionX > SCREEN_WIDTH) {
+            positionX = 0;
+        }
+        if (positionY > SCREEN_HEIGHT) {
+            positionY = 0;
+        }
     }
 }
