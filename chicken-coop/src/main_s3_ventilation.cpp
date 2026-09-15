@@ -3,6 +3,7 @@
 #include "freertos/task.h"
 
 #include <PubSubClient.h>
+#include <time.h>
 
 #include "common/web.h"
 #include "common/wifi_conn/wifi_conn.h"
@@ -12,6 +13,10 @@
 WiFiClientSecure secureClient;
 PubSubClient mqttClient(secureClient);
 
+
+
+void taskReadTemperature(void *pvParameters);
+
 void setup_aws_iot()
 {
     secureClient.setCACert(AWS_ROOT_CA);
@@ -19,6 +24,8 @@ void setup_aws_iot()
     secureClient.setPrivateKey(DEVICE_PRIVATE_KEY);
 
     mqttClient.setServer(AWS_ENDPOINT, AWS_PORT);
+    mqttClient.setBufferSize(1024); // default 256 B is smaller than the payload
+    mqttClient.setKeepAlive(60);    // AWS IoT accepts 30-1200 s, default is 15
 }
 
 bool connect_aws_iot()
@@ -30,7 +37,7 @@ bool connect_aws_iot()
     Serial.println("Connecting to AWS IoT...");
 
     bool connected = mqttClient.connect(
-        "office-vantilation-esp32"
+        "ventilation_temperature_sensors"
     );
 
     if (connected) {
@@ -69,6 +76,17 @@ void setup()
 
     common::connectToWifiWithWait(SSID_OFFICE, WIFI_PASS, "vantilation", /*disableModemSleep=*/false);
 
+    // TLS checks the validity dates of the AWS certificate, without NTP the
+    // board sits at 1970 and every handshake is rejected
+    configTime(0, 0, "pool.ntp.org");
+    Serial.print("Waiting for time");
+    while (time(nullptr) < 1700000000)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("Time is set!");
+
     Serial.println("Setup aws iot....");
     setup_aws_iot();
     Serial.println("....SUCCESS!");
@@ -100,6 +118,8 @@ void taskReadTemperature(void *pvParameters)
             ]
         })";
 
+        Serial.println("Publishing payload:");
+        Serial.println(payload);
         publish_batch(payload);
         vTaskDelay(pdMS_TO_TICKS(1200));
     }
