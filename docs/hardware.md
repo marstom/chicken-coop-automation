@@ -77,4 +77,15 @@ GPIO21 │ D6 / TX   │  D7  / GPIO20 / RX
 ![AM2320 image](images/am2320.png)
 ![AM2320 image2](images/am2320_img2.webp)
 
-## schematics
+## mini display
+
+To bardzo popularny wyświetlacz OLED 0,96" 128×64 px, najczęściej ze sterownikiem SSD1306 i komunikacją I²C.
+
+Na zdjęciu widać typowe 4 piny:
+
+- GND - masa
+- VCC - zasilanie, zwykle 3.3-5 V
+- SCL - zegar I²C
+- SDA - dane I²C
+
+![mini display](images/mini_display.png)
