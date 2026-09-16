@@ -2,7 +2,7 @@
 
 #include "wifi_conn.h"
 
-namespace common
+namespace wifi
 {
 
     void connectToWifiWithWait(const char *ssid, const char *pass, const char *hostname, bool disableModemSleep)

@@ -1,6 +1,6 @@
 #pragma once
 // WIFI operations
-namespace common
+namespace wifi
 {
     // disableModemSleep = true avoids random disconnects / MQTT keepalive
     // timeouts, but MUST be false on targets that also use BLE: the ESP32-C3
