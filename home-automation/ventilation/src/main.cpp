@@ -1,11 +1,13 @@
 #include <Arduino.h>
 #include <wifi_conn.h>
+#include "secrets/secrets_local.h"
+
 
 void setup() {
   Serial.begin(9600);
   Serial.println("Ventilation controller started");
 
-  common::connectToWifiWithWait("YOUR_SSID", "YOUR_PASS", "ventilation");
+  common::connectToWifiWithWait(WIFI_SSID, WIFI_PASS, "ventilation");
 }
 
 void loop() {
