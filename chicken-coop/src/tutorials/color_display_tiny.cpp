@@ -17,22 +17,24 @@ Adafruit_SSD1306 display(
     SCREEN_WIDTH,
     SCREEN_HEIGHT,
     &Wire,
-    -1
-);
+    -1);
 
 int positionX = 0;
 int positionY = 0;
 
 void taskDisplay(void *pvParameters);
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
 
     Wire.begin(SDA_PIN, SCL_PIN);
 
-    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+    {
         Serial.println("OLED not found");
-        while (true);
+        while (true)
+            ;
     }
 
     display.clearDisplay();
@@ -46,10 +48,15 @@ void setup() {
     // display.println("Hej!");
     display.display();
 
+    // temperature sensor
+
+    my_am2320::init(SDA_PIN, SCL_PIN);
+
     xTaskCreate(taskDisplay, "taskDisplay", 4096, NULL, 1, NULL);
 }
 
-void loop() {
+void loop()
+{
     // display.clearDisplay();
     // positionX += 1;
     // positionY += 1;
@@ -66,22 +73,37 @@ void loop() {
     // }
 }
 
+void taskDisplay(void *pvParameters)
+{
+    float temperature = 0.0;
+    float humidity = 0.0;
+    while (true)
+    {
+        //     display.clearDisplay();
+        //     positionX += 1;
+        //     positionY += 1;
+        //     display.setCursor(positionX, positionY);
+        //     display.println("Tomek");
+        //     display.display();
+        //     delay(50);
 
-void taskDisplay(void *pvParameters) {
-    while (true) {
-        display.clearDisplay();
-        positionX += 1;
-        positionY += 1;
+        //     if (positionX > SCREEN_WIDTH) {
+        //         positionX = 0;
+        //     }
+        //     if (positionY > SCREEN_HEIGHT) {
+        //         positionY = 0;
+        Serial.println(my_am2320::measure_temperature());
+        //     }
+
         display.setCursor(positionX, positionY);
-        display.println("Tomek");
+        temperature = my_am2320::measure_temperature();
+        humidity = my_am2320::measure_humidity();
+        display.println("Temp: ");
+        display.println(temperature);
+        display.println("Hum: ");
+        display.println(humidity);
         display.display();
-        delay(50);
-
-        if (positionX > SCREEN_WIDTH) {
-            positionX = 0;
-        }
-        if (positionY > SCREEN_HEIGHT) {
-            positionY = 0;
-        }
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+        display.clearDisplay();
     }
 }
