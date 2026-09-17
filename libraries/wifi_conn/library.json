@@ -15,6 +15,7 @@
     "espressif32"
   ],
   "headers": [
-    "wifi_conn.h"
+    "wifi_conn.h",
+    "wifi_mdns.h"
   ]
 }

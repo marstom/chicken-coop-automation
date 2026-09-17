@@ -5,6 +5,7 @@
 namespace wifi
 {
 
+    /* Retry until success, it blocks whole proggramm */
     void connectToWifiWithWait(const char *ssid, const char *pass, const char *hostname, bool disableModemSleep)
     {
         Serial.println("Connecting to WiFi");
@@ -13,23 +14,22 @@ namespace wifi
         WiFi.mode(WIFI_STA);
         if (disableModemSleep)
         {
-            WiFi.setSleep(false); // modem sleep causes random disconnects / MQTT keepalive timeouts
+            // connection stability is better
+            WiFi.setSleep(false);
         }
         else
         {
-            // WIFI_PS_MIN_MODEM: BLE+WiFi coexistence on ESP32-C3 requires
-            // modem sleep, otherwise coex_core_enable() calls abort() at boot
+            // it's good idea when you use thing on battery :)
             WiFi.setSleep(true);
         }
-        WiFi.setAutoReconnect(true); // let the stack retry on its own after drops
+        WiFi.setAutoReconnect(true);
         WiFi.begin(ssid, pass);
         unsigned long lastBegin = millis();
         while (WiFi.status() != WL_CONNECTED)
         {
             delay(500);
             Serial.print(".");
-            // status can get stuck in WL_CONNECT_FAILED / WL_NO_SSID_AVAIL
-            // (e.g. AP still booting after a power cut) - retry begin()
+            // on timeout try again
             if (millis() - lastBegin >= 15000)
             {
                 Serial.println();

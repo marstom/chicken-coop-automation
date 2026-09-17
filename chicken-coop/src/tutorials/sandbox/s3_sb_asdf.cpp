@@ -26,7 +26,6 @@ void setup()
   server.on("/", []() {
     server.send(200, "text/plain", "<p>Hello from ESP32-S3 Dev Kit!</p><p>Go to <a href=\"/hello\">/hello</a> to see the message from FreeRTOS task.</p>");
   });
-  server.begin();
 
   // xTaskCreate(taskHello, "taskHello", 4096, NULL, 1, NULL);
 }

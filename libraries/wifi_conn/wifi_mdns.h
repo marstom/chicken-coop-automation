@@ -1,4 +1,7 @@
+#pragma once
 
-namespace wifi {
 
+namespace wifi
+{
+    void setupMdns(const char *hostname);
 }
