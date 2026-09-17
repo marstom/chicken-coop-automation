@@ -48,7 +48,7 @@ void setup()
   });
   server.begin();
 
-  xTaskCreate(taskTemperature, "Temperature Task", 2048, NULL, 1, NULL);
+  xTaskCreate(taskTemperature, "Temperature Task", 2048*4, NULL, 1, NULL);
 
 }
 
