@@ -9,8 +9,8 @@ namespace wifi
     {
         Serial.println("Connecting to WiFi");
         Serial.println(ssid);
-        WiFi.mode(WIFI_STA);
         WiFi.setHostname(hostname);
+        WiFi.mode(WIFI_STA);
         if (disableModemSleep)
         {
             WiFi.setSleep(false); // modem sleep causes random disconnects / MQTT keepalive timeouts
