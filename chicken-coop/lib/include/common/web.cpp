@@ -13,6 +13,7 @@
 namespace common
 {
 
+
     void setupMDNS(const char *hostname, const char *instance_name)
     {
         if (hostname == nullptr || instance_name == nullptr)

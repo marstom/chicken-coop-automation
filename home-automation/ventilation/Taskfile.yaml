@@ -1,0 +1,20 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build the project
+    cmds:
+      - echo "Building the project..."
+      - pio run
+
+  upload:
+    desc: Upload the project
+    cmds:
+      - echo "Uploading the project..."
+      - pio run -t upload
+
+  upload_and_monitor:
+    desc: Upload the project and monitor the project
+    cmds:
+      - echo "Uploading the project and monitoring the project..."
+      - pio run -t upload -t monitor
