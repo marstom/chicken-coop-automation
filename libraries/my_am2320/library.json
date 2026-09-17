@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
+  "name": "MyAM2320",
+  "version": "0.0.1",
+  "description": "Temperature and Humidity Sensor Library for AM2320",
+  "keywords": [
+    "temperature",
+    "humidity",
+    "sensor"
+  ],
+  "license": "MIT",
+  "frameworks": [
+    "arduino"
+  ],
+  "platforms": [
+    "espressif32"
+  ],
+  "headers": [
+    "my_am2320.h"
+  ],
+  "dependencies": {
+    "adafruit/Adafruit AM2320 sensor library": "^1.2.5"
+  }
+}
