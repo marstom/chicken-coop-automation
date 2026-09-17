@@ -16,7 +16,8 @@
     "espressif32"
   ],
   "headers": [
-    "my_am2320.h"
+    "my_am2320.h",
+    "my_am_2320_tca9548a.h"
   ],
   "dependencies": {
     "adafruit/Adafruit AM2320 sensor library": "^1.2.5"
