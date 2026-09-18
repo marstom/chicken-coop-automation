@@ -62,7 +62,7 @@ namespace my_am2320
     {
         uint8_t sensor_id_num = static_cast<uint8_t>(sensor_id);
         selectSensor(sensor_id);
-        delay(1000); // Wait for the sensor to be ready
+        // delay(1000); // Wait for the sensor to be ready
         // TODO need dynamically select that sensor
         return list_of_sensors[sensor_id_num].readTemperature();
     }
@@ -71,7 +71,7 @@ namespace my_am2320
     {
         uint8_t sensor_id_num = static_cast<uint8_t>(sensor_id);
         selectSensor(sensor_id);
-        delay(1000); // Wait for the sensor to be ready
+        // delay(1000); // Wait for the sensor to be ready
         return list_of_sensors[sensor_id_num].readHumidity();
     }
 
