@@ -19,6 +19,10 @@ float t3 = am2320.readTemperature();
 namespace my_am2320
 {
 
+    void init_tca9548a(const int sdaPin, const int sclPin){
+        init(sdaPin, sclPin);
+    }
+
     void selectSensor(SensorId sensor)
     {
         uint8_t channel = static_cast<uint8_t>(sensor);

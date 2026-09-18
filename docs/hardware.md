@@ -89,3 +89,11 @@ Na zdjęciu widać typowe 4 piny:
 - SDA - dane I²C
 
 ![mini display](images/mini_display.png)
+
+## TCA9548A 1-to-8 I2C Multiplexer
+
+page:
+
+https://randomnerdtutorials.com/tca9548a-i2c-multiplexer-esp32-esp8266-arduino/
+https://learn.adafruit.com/adafruit-tca9548a-1-to-8-i2c-multiplexer-breakout
+https://botland.com.pl/multipleksery/4915-tca9548a-modul-z-multiplekserem-i2c-adafruit-2717-5904422354268.html

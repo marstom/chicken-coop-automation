@@ -24,6 +24,7 @@ namespace my_am2320
         Outside = 3
     };
 
+    void init_tca9548a(const int sdaPin, const int sclPin);
     void selectSensor(SensorId sensor);
     float measure_temperature_from_sensor_x(SensorId sensor_id);
     float measure_humidity_from_sensor_x(SensorId sensor_id);

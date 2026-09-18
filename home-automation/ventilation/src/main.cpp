@@ -9,29 +9,20 @@
 #include <wifi_conn.h>
 #include <wifi_mdns.h>
 #include <uart_utils.h>
-#include <my_am2320.h>
+#include <my_am_2320_tca9548a.h>
 
 #include "secrets/secrets_local.h"
 
 WebServer server(80);
 
-void taskTemperature(void *pvParameters)
-{
-  while (true)
-  {
-    float temperature = my_am2320::measure_temperature();
-    float humidity = my_am2320::measure_humidity();
-    Serial.printf("Temperature: %.2f C, Humidity: %.2f %%\n", temperature, humidity);
-    vTaskDelay(250 / portTICK_PERIOD_MS);
-  }
-}
+void taskTemperature(void *pvParameters);
 
 void setup()
 {
   common::connectToUartWithWait();
   wifi::connectToWifiWithWait(WIFI_SSID, WIFI_PASS, "ventilation", true);
 
-  my_am2320::init(GPIO_NUM_1, GPIO_NUM_2);
+  my_am2320::init_tca9548a(GPIO_NUM_1, GPIO_NUM_2);
   Serial.println("Ventilation controller started");
 
   wifi::setupMdns("ventilation");
@@ -57,4 +48,29 @@ void loop()
 {
   delay(10);
   server.handleClient();
+}
+
+
+void taskTemperature(void *pvParameters)
+{
+  float temperature = 0.0;
+  float humidity = 0.0;
+
+  while (true)
+  {
+    temperature = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Intake);
+    humidity = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Intake);
+    Serial.printf("T Intake: %.2f C, H Intake: %.2f %%\n", temperature, humidity);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    temperature = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Exhaust);
+    humidity = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Exhaust);
+    Serial.printf("T Exhaust: %.2f C, H Exhaust: %.2f %%\n", temperature, humidity);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    temperature = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Room);
+    humidity = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Room);
+    Serial.printf("T Room: %.2f C, H Room: %.2f %%\n", temperature, humidity);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+  }
 }
