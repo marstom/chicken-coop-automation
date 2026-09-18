@@ -34,9 +34,8 @@ namespace my_am2320
     {
         Wire.end(); 
 
-        delay(1000);
-        Wire.begin(sdaPin, sclPin);
-        Wire.setClock(100000);
+        // delay(1000);
+        Wire.begin(sdaPin, sclPin, 500000);
         delay(1000);
     }
     void init_tca9548a_sensor(SensorId sensor_id)
@@ -55,6 +54,7 @@ namespace my_am2320
         uint8_t channel = static_cast<uint8_t>(sensor);
         Wire.beginTransmission(muxAddr);
         Wire.write(1 << channel);
+        // delay(250); // Wait for the sensor to be ready
         Wire.endTransmission();
     }
 
@@ -62,7 +62,7 @@ namespace my_am2320
     {
         uint8_t sensor_id_num = static_cast<uint8_t>(sensor_id);
         selectSensor(sensor_id);
-        delay(100); // Wait for the sensor to be ready
+        delay(1000); // Wait for the sensor to be ready
         // TODO need dynamically select that sensor
         return list_of_sensors[sensor_id_num].readTemperature();
     }
@@ -71,7 +71,7 @@ namespace my_am2320
     {
         uint8_t sensor_id_num = static_cast<uint8_t>(sensor_id);
         selectSensor(sensor_id);
-        delay(100); // Wait for the sensor to be ready
+        delay(1000); // Wait for the sensor to be ready
         return list_of_sensors[sensor_id_num].readHumidity();
     }
 
