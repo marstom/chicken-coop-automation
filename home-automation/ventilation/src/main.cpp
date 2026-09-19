@@ -34,13 +34,9 @@ void setup()
   wifi::connectToWifiWithWait(WIFI_SSID, WIFI_PASS, "ventilation", true);
 
   my_am2320::init_wire(GPIO_NUM_1, GPIO_NUM_2);
-  delay(1000);
   my_am2320::init_tca9548a_sensor(my_am2320::SensorId::Intake);
-  delay(1000);
   my_am2320::init_tca9548a_sensor(my_am2320::SensorId::Exhaust);
-  delay(1000);
   my_am2320::init_tca9548a_sensor(my_am2320::SensorId::Room);
-  delay(1000);
   Serial.println("Ventilation controller started");
 
   wifi::setupMdns("ventilation");
@@ -65,13 +61,11 @@ void taskTemperature(void* pvParameters)
     temperature_intake = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Intake);
     humidity_intake = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Intake);
     Serial.printf("T Intake: %.2f C, H Intake: %.2f %%\n", temperature_intake, humidity_intake);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
 
     temperature_exhaust =
         my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Exhaust);
     humidity_exhaust = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Exhaust);
     Serial.printf("T Exhaust: %.2f C, H Exhaust: %.2f %%\n", temperature_exhaust, humidity_exhaust);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
 
     temperature_room = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Room);
     humidity_room = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Room);
