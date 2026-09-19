@@ -56,24 +56,80 @@ void loop()
 
 void taskTemperature(void *pvParameters)
 {
-  float temperature = 0.0;
-  float humidity = 0.0;
+  float temperature_intake = 0.0;
+  float humidity_intake = 0.0;
+  float temperature_exhaust = 0.0;
+  float humidity_exhaust = 0.0;
+  float temperature_room = 0.0;
+  float humidity_room = 0.0;
 
   while (true)
   {
-    temperature = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Intake);
-    humidity = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Intake);
-    Serial.printf("T Intake: %.2f C, H Intake: %.2f %%\n", temperature, humidity);
+    temperature_intake = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Intake);
+    humidity_intake = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Intake);
+    Serial.printf("T Intake: %.2f C, H Intake: %.2f %%\n", temperature_intake, humidity_intake);
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
-    temperature = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Exhaust);
-    humidity = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Exhaust);
-    Serial.printf("T Exhaust: %.2f C, H Exhaust: %.2f %%\n", temperature, humidity);
+    temperature_intake = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Exhaust);
+    humidity_exhaust = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Exhaust);
+    Serial.printf("T Exhaust: %.2f C, H Exhaust: %.2f %%\n", temperature_exhaust, humidity_exhaust);
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
-    temperature = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Room);
-    humidity = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Room);
-    Serial.printf("T Room: %.2f C, H Room: %.2f %%\n", temperature, humidity);
+    temperature_intake = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Room);
+    humidity_room = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Room);
+    Serial.printf("T Room: %.2f C, H Room: %.2f %%\n", temperature_room, humidity_room);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
-  }
+
+    // 
+    /*
+    Build JSON response:
+    {
+      "temperature": {
+        "intake": temperature,
+        "exhaust": temperature,
+        "room": temperature
+      },
+      "humidity": {
+        "intake": humidity,
+        "exhaust": humidity,
+        "room": humidity
+    }
+    */
+    String jsonResponse = "{\"temperature\":{\"intake\":";
+    jsonResponse += temperature_intake;
+    jsonResponse += ",\"exhaust\":";
+    jsonResponse += temperature_intake;
+    jsonResponse += ",\"room\":";
+    jsonResponse += temperature_intake;
+    jsonResponse += "},\"humidity\":{\"intake\":";
+    jsonResponse += humidity_intake;
+    jsonResponse += ",\"exhaust\":";
+    jsonResponse += humidity_exhaust;
+    jsonResponse += ",\"room\":";
+    jsonResponse += humidity_room;
+    jsonResponse += "}}";
+    server.send(200, "application/json", jsonResponse);
+}
+
+
+}
+
+
+
+String buildJsonResponse(float temperature_intake, float humidity_intake, float temperature_exhaust, float humidity_exhaust, float temperature_room, float humidity_room)
+{
+  String jsonResponse = "{\"temperature\":{\"intake\":";
+  jsonResponse += temperature_intake;
+  jsonResponse += ",\"exhaust\":";
+  jsonResponse += temperature_intake;
+  jsonResponse += ",\"room\":";
+  jsonResponse += temperature_intake;
+  jsonResponse += "},\"humidity\":{\"intake\":";
+  jsonResponse += humidity_intake;
+  jsonResponse += ",\"exhaust\":";
+  jsonResponse += humidity_exhaust;
+  jsonResponse += ",\"room\":";
+  jsonResponse += humidity_room;
+  jsonResponse += "}}";
+  return jsonResponse;
 }
