@@ -35,7 +35,7 @@ namespace my_am2320
         Wire.end(); 
 
         // delay(1000);
-        Wire.begin(sdaPin, sclPin, 500000);
+        Wire.begin(sdaPin, sclPin, 50000);
         delay(1000);
     }
     void init_tca9548a_sensor(SensorId sensor_id)
@@ -46,6 +46,9 @@ namespace my_am2320
         if (!list_of_sensors[sensor_id_num].begin())
         {
             Serial.println("AM2320 not found");
+        } else {
+
+            Serial.println("AM2320 Found at channel " + String(sensor_id_num));
         }
     }
 
@@ -54,8 +57,9 @@ namespace my_am2320
         uint8_t channel = static_cast<uint8_t>(sensor);
         Wire.beginTransmission(muxAddr);
         Wire.write(1 << channel);
-        // delay(250); // Wait for the sensor to be ready
+        delay(500); // Wait for the sensor to be ready
         Wire.endTransmission();
+        delay(500); // Wait for the sensor to be ready
     }
 
     float measure_temperature_from_sensor_x(SensorId sensor_id)
