@@ -33,7 +33,7 @@ void setup()
   common::connectToUartWithWait();
   wifi::connectToWifiWithWait(WIFI_SSID, WIFI_PASS, "ventilation", true);
 
-  my_am2320::init_wire(GPIO_NUM_10, GPIO_NUM_11);
+  my_am2320::init_wire(GPIO_NUM_1, GPIO_NUM_2);
   delay(1000);
   my_am2320::init_tca9548a_sensor(my_am2320::SensorId::Intake);
   delay(1000);

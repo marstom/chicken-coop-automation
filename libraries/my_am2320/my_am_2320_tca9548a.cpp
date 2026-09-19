@@ -32,10 +32,7 @@ namespace my_am2320
 
     void init_wire(const int sdaPin, const int sclPin)
     {
-        Wire.end(); 
-
-        // delay(1000);
-        Wire.begin(sdaPin, sclPin, 50000);
+        Wire.begin(sdaPin, sclPin);
         delay(1000);
     }
     void init_tca9548a_sensor(SensorId sensor_id)
