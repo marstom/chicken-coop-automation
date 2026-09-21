@@ -39,6 +39,14 @@ namespace tiny_yellow_blue_display
 
   void displayText(const char* text, int x, int y)
   {
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(x, y);
+    display.println(text);
+  }
+
+  void displayTextBig(const char* text, int x, int y)
+  {
     display.setTextSize(2);
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(x, y);
@@ -59,6 +67,11 @@ namespace tiny_yellow_blue_display
   void clearDisplay()
   {
     display.clearDisplay();
+  }
+
+  void show()
+  {
+    display.display();
   }
 
 

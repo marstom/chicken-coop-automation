@@ -50,6 +50,7 @@ void setup()
   tiny_yellow_blue_display::clearDisplay();
   tiny_yellow_blue_display::displayText("Ventilation", 0, 0);
   tiny_yellow_blue_display::displayText("Temperature", 0, 12);
+  tiny_yellow_blue_display::show();
 
   server.on("/", []() { server.send(200, "text/plain", "Hello"); });
   server.on("/api", []() { server.send(200, "application/json", buildJsonResponse()); });
@@ -81,8 +82,7 @@ void taskTemperature(void* pvParameters)
     humidity_room = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Room);
     Serial.printf("T Room: %.2f C, H Room: %.2f %%\n", temperature_room, humidity_room);
 
-    // displayAllValuedOnDisplay(temperature_intake, humidity_intake, temperature_exhaust,
-    // humidity_exhaust, temperature_room, humidity_room);
+    displayAllValuedOnDisplay(temperature_intake, humidity_intake, temperature_exhaust, humidity_exhaust, temperature_room, humidity_room);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
   }
 }
@@ -128,22 +128,27 @@ void displayAllValuedOnDisplay(float temperature_intake, float humidity_intake,
                                float temperature_exhaust, float humidity_exhaust,
                                float temperature_room, float humidity_room)
 {
-  // The displayText function expects a const char*, so convert String to c_str()
-  // (Don't call displayText directly in the selection, just show the corrected usage)
-  // Example fix:
-  // String line = "H Room: " + String(humidity_room) + " %";
-  // tiny_yellow_blue_display::displayText(line.c_str(), 0, 60);
+  // ROUND all floats to 2 decimal places
+  temperature_intake = round(temperature_intake * 100) / 100;
+  humidity_intake = round(humidity_intake * 100) / 100;
+  temperature_exhaust = round(temperature_exhaust * 100) / 100;
+  humidity_exhaust = round(humidity_exhaust * 100) / 100;
+  temperature_room = round(temperature_room * 100) / 100;
+  humidity_room = round(humidity_room * 100) / 100;
+
   tiny_yellow_blue_display::clearDisplay();
-  String line = "T Intake: " + String(temperature_intake) + " C";
-  tiny_yellow_blue_display::displayText(line.c_str(), 0, 0);
-  line = "H Intake: " + String(humidity_intake) + " %";
-  tiny_yellow_blue_display::displayText(line.c_str(), 0, 12);
-  line = "T Exhaust: " + String(temperature_exhaust) + " C";
+  tiny_yellow_blue_display::displayText("Powietrze Tomek Pokoj", 0, 0);
+  String line = "i " + String(temperature_intake) + "C";
   tiny_yellow_blue_display::displayText(line.c_str(), 0, 24);
-  line = "H Exhaust: " + String(humidity_exhaust) + " %";
-  tiny_yellow_blue_display::displayText(line.c_str(), 0, 36);
-  line = "T Room: " + String(temperature_room) + " C";
-  tiny_yellow_blue_display::displayText(line.c_str(), 0, 48);
-  line = "H Room: " + String(humidity_room) + " %";
-  tiny_yellow_blue_display::displayText(line.c_str(), 0, 60);
+  line = "" + String(humidity_intake) + "%";
+  tiny_yellow_blue_display::displayText(line.c_str(), 54, 24);
+  line = "e " + String(temperature_exhaust) + "C";
+  tiny_yellow_blue_display::displayText(line.c_str(), 0, 12+24);
+  line = "" + String(humidity_exhaust) + "%";
+  tiny_yellow_blue_display::displayText(line.c_str(), 54, 12+24);
+  line = "r " + String(temperature_room) + "C";
+  tiny_yellow_blue_display::displayText(line.c_str(), 0, 24+24);
+  line = "" + String(humidity_room) + "%";
+  tiny_yellow_blue_display::displayText(line.c_str(), 54, 24+24);
+  tiny_yellow_blue_display::show();
 }
