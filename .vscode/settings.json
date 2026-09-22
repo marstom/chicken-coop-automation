@@ -1,15 +1,14 @@
 {
-    "files.associations": {
-        "*.page-template": "vue",
-        "*.layout-template": "vue",
-        "*.vue": "vue",
-        "istream": "cpp",
-        "ostream": "cpp"
-    },
-    "idf.currentSetup": "/Users/tomaszmarszalek/esp/esp-idf",
-    "clangd.arguments": [
-        "--query-driver=/Users/tomaszmarszalek/.platformio/packages/toolchain-*/bin/*"
-      ],
-      "editor.formatOnSave": true,
-      "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+  "clangd.path": "/usr/bin/clangd",
+
+  "clangd.arguments": [
+    "--query-driver=/Users/tomaszmarszalek/.platformio/packages/toolchain-*/bin/*"
+  ],
+
+  "editor.formatOnSave": true,
+
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+  "clang-format.executable": "/opt/homebrew/bin/clang-format"
 }

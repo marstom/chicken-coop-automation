@@ -3,9 +3,11 @@ version: '3'
 tasks:
   build:
     desc: Build the project
+    vars:
+      TARGET: '{{default "s3-main" .TARGET}}'
     cmds:
       - echo "Building the project..."
-      - pio run
+      - pio run -e {{.TARGET}}
 
   upload:
     desc: Upload the project

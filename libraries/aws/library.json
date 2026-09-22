@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
+  "name": "MyAWS",
+  "version": "0.0.1",
+  "description": "AWS Library for ESP32",
+  "keywords": [
+    "aws",
+    "esp32",
+    "iot"
+  ],
+  "license": "MIT",
+  "frameworks": [
+    "arduino"
+  ],
+  "platforms": [
+    "espressif32"
+  ],
+  "headers": [
+    "my_aws.h"
+  ],
+  "dependencies": {
+    "knolleary/PubSubClient": "^2.8"
+  }
+}

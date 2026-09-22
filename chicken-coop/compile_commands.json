@@ -1,0 +1,152 @@
+[
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libea6/logic/door_auth.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/logic lib/logic/door_auth.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/logic/door_auth.cpp",
+        "output": ".pio/build/native/libea6/logic/door_auth.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/lib23a/communication/mqtt_comm.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/communication -Ilib/logic lib/communication/mqtt_comm.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/communication/mqtt_comm.cpp",
+        "output": ".pio/build/native/lib23a/communication/mqtt_comm.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/chicken_coop/tasks.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/chicken_coop/tasks.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/chicken_coop/tasks.cpp",
+        "output": ".pio/build/native/libc70/include/chicken_coop/tasks.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/chicken_coop/web.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/chicken_coop/web.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/chicken_coop/web.cpp",
+        "output": ".pio/build/native/libc70/include/chicken_coop/web.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/common/ble.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/common/ble.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/common/ble.cpp",
+        "output": ".pio/build/native/libc70/include/common/ble.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/common/mqtt.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/common/mqtt.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/common/mqtt.cpp",
+        "output": ".pio/build/native/libc70/include/common/mqtt.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/common/ota.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/common/ota.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/common/ota.cpp",
+        "output": ".pio/build/native/libc70/include/common/ota.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/common/web.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/common/web.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/common/web.cpp",
+        "output": ".pio/build/native/libc70/include/common/web.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/common/wifi_conn/wifi_conn.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/common/wifi_conn/wifi_conn.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/common/wifi_conn/wifi_conn.cpp",
+        "output": ".pio/build/native/libc70/include/common/wifi_conn/wifi_conn.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/debug_tools/debug_tools.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/debug_tools/debug_tools.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/debug_tools/debug_tools.cpp",
+        "output": ".pio/build/native/libc70/include/debug_tools/debug_tools.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/mcu/s3specific/hardware.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/mcu/s3specific/hardware.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/mcu/s3specific/hardware.cpp",
+        "output": ".pio/build/native/libc70/include/mcu/s3specific/hardware.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/relay_controller/ble.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/relay_controller/ble.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/relay_controller/ble.cpp",
+        "output": ".pio/build/native/libc70/include/relay_controller/ble.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/relay_controller/rfid_board.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/relay_controller/rfid_board.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/relay_controller/rfid_board.cpp",
+        "output": ".pio/build/native/libc70/include/relay_controller/rfid_board.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/libc70/include/relay_controller/tasks.o -c -std=gnu++17 -DPLATFORMIO=60200 -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic lib/include/relay_controller/tasks.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "lib/include/relay_controller/tasks.cpp",
+        "output": ".pio/build/native/libc70/include/relay_controller/tasks.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/main_c3_chicken_coop_temp_amonia_sensor.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/main_c3_chicken_coop_temp_amonia_sensor.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/main_c3_chicken_coop_temp_amonia_sensor.cpp",
+        "output": ".pio/build/native/src/main_c3_chicken_coop_temp_amonia_sensor.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/main_c3_relay_controller.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/main_c3_relay_controller.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/main_c3_relay_controller.cpp",
+        "output": ".pio/build/native/src/main_c3_relay_controller.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/main_s3_ventilation.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/main_s3_ventilation.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/main_s3_ventilation.cpp",
+        "output": ".pio/build/native/src/main_s3_ventilation.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/tutorials/am2320_ex.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/tutorials/am2320_ex.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/tutorials/am2320_ex.cpp",
+        "output": ".pio/build/native/src/tutorials/am2320_ex.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/tutorials/c3_mqtt_bme_sensor.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/tutorials/c3_mqtt_bme_sensor.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/tutorials/c3_mqtt_bme_sensor.cpp",
+        "output": ".pio/build/native/src/tutorials/c3_mqtt_bme_sensor.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/tutorials/color_display_tiny.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/tutorials/color_display_tiny.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/tutorials/color_display_tiny.cpp",
+        "output": ".pio/build/native/src/tutorials/color_display_tiny.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/tutorials/main_s3_dev_kit_led.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/tutorials/main_s3_dev_kit_led.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/tutorials/main_s3_dev_kit_led.cpp",
+        "output": ".pio/build/native/src/tutorials/main_s3_dev_kit_led.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/tutorials/s3_basic_setup_ble.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/tutorials/s3_basic_setup_ble.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/tutorials/s3_basic_setup_ble.cpp",
+        "output": ".pio/build/native/src/tutorials/s3_basic_setup_ble.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/tutorials/s3_rfid_module_task.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/tutorials/s3_rfid_module_task.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/tutorials/s3_rfid_module_task.cpp",
+        "output": ".pio/build/native/src/tutorials/s3_rfid_module_task.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/tutorials/sandbox/s3_sb_asdf.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/tutorials/sandbox/s3_sb_asdf.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/tutorials/sandbox/s3_sb_asdf.cpp",
+        "output": ".pio/build/native/src/tutorials/sandbox/s3_sb_asdf.o"
+    },
+    {
+        "command": "/usr/bin/g++ -o .pio/build/native/src/tutorials/sandbox/s3_sb_http_server_dns.o -c -std=gnu++17 -DPLATFORMIO=60200 -Iinclude -Isrc -Ilib/include -Ilib/secrets -Ilib/communication -Ilib/logic src/tutorials/sandbox/s3_sb_http_server_dns.cpp",
+        "directory": "/Users/tomaszmarszalek/dev/esp_32_projekty/01-Read-temperature/chicken-coop",
+        "file": "src/tutorials/sandbox/s3_sb_http_server_dns.cpp",
+        "output": ".pio/build/native/src/tutorials/sandbox/s3_sb_http_server_dns.o"
+    }
+]
