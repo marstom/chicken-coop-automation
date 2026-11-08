@@ -69,6 +69,7 @@ void taskTemperature(void* pvParameters)
 {
   while (true)
   {
+    Serial.println("Measuring temperature and humidity from sensors...");
     temperature_intake = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Intake);
     humidity_intake = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Intake);
     Serial.printf("T Intake: %.2f C, H Intake: %.2f %%\n", temperature_intake, humidity_intake);
