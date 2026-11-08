@@ -4,6 +4,7 @@
 #include <driver/gpio.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <RMaker.h>
 
 // local libs
 #include <my_am_2320_tca9548a.h>
@@ -25,7 +26,15 @@ float humidity_exhaust = NAN;
 float temperature_room = NAN;
 float humidity_room = NAN;
 
+// Application RainMaker for android, allows us go with home automation!
+
+static const char* service_name = "PROV_ventilation";
+static const char* pop = "abcd1234";  // proof of possession, shown in the QR code
+
+static TemperatureSensor* sensor_intake;
+
 void taskTemperature(void* pvParameters);
+static TemperatureSensor* makeSensor(Node& node, const char* name);
 
 String buildJsonResponse();
 
@@ -56,6 +65,14 @@ void setup()
   server.on("/api", []() { server.send(200, "application/json", buildJsonResponse()); });
   server.begin();
 
+  // Setup rainmaker node
+  Node node =  RMaker.initNode("Ventilation Controller");
+  sensor_intake = makeSensor(node, "Temperature Sensor");
+
+  RMaker.enableOTA(OTA_USING_TOPICS);
+  RMaker.enableTZService();
+  RMaker.start();
+
   xTaskCreate(taskTemperature, "Temperature Task", 2048 * 4, NULL, 1, NULL);
 }
 
@@ -67,12 +84,14 @@ void loop()
 
 void taskTemperature(void* pvParameters)
 {
+
   while (true)
   {
     Serial.println("Measuring temperature and humidity from sensors...");
     temperature_intake = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Intake);
     humidity_intake = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Intake);
     Serial.printf("T Intake: %.2f C, H Intake: %.2f %%\n", temperature_intake, humidity_intake);
+    sensor_intake->updateAndReportParam("Humidity", humidity_intake);
 
     temperature_exhaust =
         my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Exhaust);
@@ -152,4 +171,16 @@ void displayAllValuedOnDisplay(float temperature_intake, float humidity_intake,
   line = "" + String(humidity_room) + "%";
   tiny_yellow_blue_display::displayText(line.c_str(), 54, 24+24);
   tiny_yellow_blue_display::show();
+}
+
+
+
+
+static TemperatureSensor* makeSensor(Node& node, const char* name)
+{ 
+  auto* s = new TemperatureSensor(name);
+  Param humidity("Humidity", "custom.param.humidity", value(0.0f), PROP_FLAG_READ);
+  s->addParam(humidity);
+  node.addDevice(*s);
+  return s;
 }
