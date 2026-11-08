@@ -5,13 +5,14 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <RMaker.h>
+#include <WiFiProv.h>
 
 // local libs
 #include <my_am_2320_tca9548a.h>
 #include <tiny_yellow_blue_display.h>
 #include <uart_utils.h>
 #include <wifi_conn.h>
-#include <wifi_mdns.h>
+// #include <wifi_mdns.h>
 
 #include "secrets/secrets_local.h"
 
@@ -34,7 +35,10 @@ static const char* pop = "abcd1234";  // proof of possession, shown in the QR co
 static TemperatureSensor* sensor_intake;
 
 void taskTemperature(void* pvParameters);
+//
 static TemperatureSensor* makeSensor(Node& node, const char* name);
+void sysProvEvent(arduino_event_t* sys_event);
+//
 
 String buildJsonResponse();
 
@@ -45,7 +49,7 @@ void displayAllValuedOnDisplay(float temperature_intake, float humidity_intake,
 void setup()
 {
   common::connectToUartWithWait();
-  wifi::connectToWifiWithWait(WIFI_SSID, WIFI_PASS, "ventilation", true);
+  // wifi::connectToWifiWithWait(WIFI_SSID, WIFI_PASS, "ventilation", true);
 
   my_am2320::init_wire(GPIO_NUM_1, GPIO_NUM_2);
   my_am2320::init_tca9548a_sensor(my_am2320::SensorId::Intake);
@@ -53,7 +57,7 @@ void setup()
   my_am2320::init_tca9548a_sensor(my_am2320::SensorId::Room);
   Serial.println("Ventilation controller started");
 
-  wifi::setupMdns("ventilation");
+  // wifi::setupMdns("ventilation");
 
   tiny_yellow_blue_display::init();
   tiny_yellow_blue_display::clearDisplay();
@@ -63,7 +67,6 @@ void setup()
 
   server.on("/", []() { server.send(200, "text/plain", "Hello"); });
   server.on("/api", []() { server.send(200, "application/json", buildJsonResponse()); });
-  server.begin();
 
   // Setup rainmaker node
   Node node =  RMaker.initNode("Ventilation Controller");
@@ -72,6 +75,20 @@ void setup()
   RMaker.enableOTA(OTA_USING_TOPICS);
   RMaker.enableTZService();
   RMaker.start();
+
+  WiFi.setHostname("ventilation");
+  WiFi.setAutoReconnect(true);
+  WiFi.onEvent(sysProvEvent);
+  WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM,
+                          WIFI_PROV_SECURITY_1, pop, service_name);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("Connected to WiFi");
+
+  server.begin();
 
   xTaskCreate(taskTemperature, "Temperature Task", 2048 * 4, NULL, 1, NULL);
 }
@@ -91,6 +108,7 @@ void taskTemperature(void* pvParameters)
     temperature_intake = my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Intake);
     humidity_intake = my_am2320::measure_humidity_from_sensor_x(my_am2320::SensorId::Intake);
     Serial.printf("T Intake: %.2f C, H Intake: %.2f %%\n", temperature_intake, humidity_intake);
+    sensor_intake->updateAndReportParam("Temperature", temperature_intake);
     sensor_intake->updateAndReportParam("Humidity", humidity_intake);
 
     temperature_exhaust =
@@ -183,4 +201,22 @@ static TemperatureSensor* makeSensor(Node& node, const char* name)
   s->addParam(humidity);
   node.addDevice(*s);
   return s;
+}
+
+
+void sysProvEvent(arduino_event_t* sys_event)
+{
+  switch (sys_event->event_id)
+  {
+    case ARDUINO_EVENT_PROV_START:
+      Serial.println("Provisioning started with BLE");
+      WiFiProv.printQR(service_name, pop, "ble");  // scan this with the RainMaker app
+      break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      // wifi::setupMdns("ventilation");  // start mDNS only after the network is up
+      Serial.println("WiFi connected, provisioning done");
+      break;
+    default:
+      break;
+  }
 }
