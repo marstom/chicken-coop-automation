@@ -27,17 +27,26 @@ float humidity_exhaust = NAN;
 float temperature_room = NAN;
 float humidity_room = NAN;
 
+volatile bool fan_power = false;
+volatile int fan_speed = 30;
+volatile float target_temperature_value = 21.0f;
+
 // Application RainMaker for android, allows us go with home automation!
 
 static const char* service_name = "PROV_ventilation";
 static const char* pop = "abcd1234";  // proof of possession, shown in the QR code
 
+static Device* ventilation;   // a generic device for controls
+
 static TemperatureSensor* sensor_intake;
 
 void taskTemperature(void* pvParameters);
-//
+// Rain Maker
 static TemperatureSensor* makeSensor(Node& node, const char* name);
 void sysProvEvent(arduino_event_t* sys_event);
+static void makeVentilationDevice(Node& node);
+void write_callback(Device* device, Param* param, const param_val_t val,
+                    void* priv_data, write_ctx_t* ctx);
 //
 
 String buildJsonResponse();
@@ -71,6 +80,7 @@ void setup()
   // Setup rainmaker node
   Node node =  RMaker.initNode("Ventilation Controller");
   sensor_intake = makeSensor(node, "Temperature Sensor");
+  makeVentilationDevice(node);
 
   RMaker.enableOTA(OTA_USING_TOPICS);
   RMaker.enableTZService();
@@ -110,6 +120,7 @@ void taskTemperature(void* pvParameters)
     Serial.printf("T Intake: %.2f C, H Intake: %.2f %%\n", temperature_intake, humidity_intake);
     sensor_intake->updateAndReportParam("Temperature", temperature_intake);
     sensor_intake->updateAndReportParam("Humidity", humidity_intake);
+    sensor_intake->updateAndReportParam("SomeValue", 99.0f);
 
     temperature_exhaust =
         my_am2320::measure_temperature_from_sensor_x(my_am2320::SensorId::Exhaust);
@@ -197,8 +208,20 @@ void displayAllValuedOnDisplay(float temperature_intake, float humidity_intake,
 static TemperatureSensor* makeSensor(Node& node, const char* name)
 { 
   auto* s = new TemperatureSensor(name);
-  Param humidity("Humidity", "custom.param.humidity", value(0.0f), PROP_FLAG_READ);
+  Param humidity("Humidity", "custom.param.humidity", value(0.0f), PROP_FLAG_READ | PROP_FLAG_TIME_SERIES);
+  Param temperature("Temperature", "custom.param.temperature", value(0.0f), PROP_FLAG_READ | PROP_FLAG_TIME_SERIES);
+  Param some_value("SomeValue", "custom.param.some_value", value(0.0f), PROP_FLAG_READ);
+
+  Param target_temperature("TargetTemperature", "custom.param.target_temperature", value(25.0f), PROP_FLAG_READ | PROP_FLAG_WRITE | PROP_FLAG_PERSIST);
+  target_temperature.addUIType(ESP_RMAKER_UI_SLIDER);
+  target_temperature.addBounds(value(15.0f), value(30.0f), value(0.5f));
+
   s->addParam(humidity);
+  s->addParam(temperature);
+  s->addParam(some_value);
+  s->addParam(target_temperature);
+  s->addCb(write_callback);
+
   node.addDevice(*s);
   return s;
 }
@@ -219,4 +242,51 @@ void sysProvEvent(arduino_event_t* sys_event)
     default:
       break;
   }
+}
+
+
+
+
+// Controll by app
+static void makeVentilationDevice(Node& node)
+{
+  ventilation = new Device("Ventilation", "esp.device.fan");
+
+  ventilation->addNameParam();
+  ventilation->addPowerParam(false);          // standard "Power" toggle, writable
+  ventilation->assignPrimaryParam(ventilation->getParamByName("Power"));
+
+  Param speed("Speed", "custom.param.speed", value(30), PROP_FLAG_READ | PROP_FLAG_WRITE);
+  speed.addUIType(ESP_RMAKER_UI_SLIDER);
+  speed.addBounds(value(0), value(100), value(5));   // min, max, step
+  ventilation->addParam(speed);
+
+  ventilation->addCb(write_callback);
+  node.addDevice(*ventilation);
+}
+
+
+void write_callback(Device* device, Param* param, const param_val_t val,
+                    void* priv_data, write_ctx_t* ctx)
+{
+  const char* name = param->getParamName();
+
+  if (strcmp(name, "Power") == 0)
+  {
+    fan_power = val.val.b;
+    Serial.printf("Power -> %s\n", fan_power ? "ON" : "OFF");
+  }
+  else if (strcmp(name, "Speed") == 0)
+  {
+    fan_speed = val.val.i;
+    Serial.printf("Speed -> %d\n", fan_speed);
+  }
+  // this is from temperature tile
+  else if (strcmp(name, "TargetTemperature") == 0)
+  {
+    target_temperature_value = val.val.f;
+    Serial.printf("TargetTemperature -> %.2f\n", target_temperature_value);
+  }
+
+  param->updateAndReport(val);   // confirm the new value back to the app
 }
