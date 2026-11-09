@@ -10,19 +10,37 @@ tasks:
       - pio run -e {{.TARGET}}
 
   upload:
-    desc: Upload the project
+    desc: "Upload the project: task --dry upload TARGET=s3-rainmaker-basic"
+    vars:
+      TARGET: '{{default "s3-main" .TARGET}}'
     cmds:
       - echo "Uploading the project..."
-      - pio run -t upload
+      - pio run -e {{.TARGET}} -t upload
 
-  upload_and_monitor:
+
+  upload:monitor:
     desc: Upload the project and monitor the project
+    vars:
+      TARGET: '{{default "s3-main" .TARGET}}'
     cmds:
       - echo "Uploading the project and monitoring the project..."
-      - pio run -t upload -t monitor
+      - pio run -e {{.TARGET}} -t upload -t monitor
+
 
   monitor:
     desc: Upload the project and monitor the project
+    vars:
+      TARGET: '{{default "s3-main" .TARGET}}'
     cmds:
       - echo "Monitoring..."
       - pio run -t monitor
+
+  erase:upload:monitor:
+    desc: When I want reconnect device from scratch
+    prompt:
+      - are you sure you want to erase???
+    vars:
+      TARGET: '{{default "s3-main" .TARGET}}'
+    cmds:
+      - echo "Uploading the project and monitoring the project..."
+      - pio run -e {{.TARGET}} -t erase -t upload -t monitor
