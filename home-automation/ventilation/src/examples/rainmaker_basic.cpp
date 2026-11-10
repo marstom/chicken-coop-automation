@@ -42,6 +42,7 @@ void setup()
   RMaker.start();
 
   wifi::connectToWifiWithProvisioning("biuro", service_name, pop, true);
+
   // provision wifi
   // WiFi.setHostname("biuro");
   // WiFi.setAutoReconnect(true);

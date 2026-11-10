@@ -7,7 +7,7 @@ namespace wifi
   // coexistence layer aborts unless WiFi modem sleep stays enabled.
   void connectToWifiWithWait(const char* ssid, const char* pass, const char* hostname,
                              bool disableModemSleep = true);
-  void connectToWifiWithProvisioning(const char* hostname, const char* service_name,
-                                     const char* pop, bool autoReconnect = true);
 
+  void connectToWifiWithProvisioning(const char* hostname, const char* service_name,
+                                     const char* pop, bool autoReconnect=true);
 } // namespace wifi
