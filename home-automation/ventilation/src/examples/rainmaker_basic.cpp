@@ -1,13 +1,15 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <RMaker.h>
-#include <WiFi.h>
-#include <WiFiProv.h>
+// #include <WiFi.h>
+// #include <WiFiProv.h>
 
 #include "secrets/secrets_local.h"
 
 // local libs
 #include "uart_utils.h"
+#include "wifi_conn.h"
+
 // dioda
 static const uint8_t RGB_LED_PIN = 48; // WS2812 on ESP32-S3-DevKitM-1
 static bool rgb_on = false;
@@ -22,9 +24,7 @@ static Device* led_device;
 static bool diode_on = false;
 
 void taskDeviceControl(void* pvParameters);
-void sysProvEvent(arduino_event_t* sys_event);
 static void makeLedButtonDevice(Node& node);
-void waitWiFiConnected();
 static void applyRgb();
 
 void write_callback(Device* device, Param* param, const param_val_t val, void* priv_data,
@@ -41,13 +41,14 @@ void setup()
 
   RMaker.start();
 
+  wifi::connectToWifiWithProvisioning("biuro", service_name, pop, true);
   // provision wifi
-  WiFi.setHostname("biuro");
-  WiFi.setAutoReconnect(true);
-  WiFi.onEvent(sysProvEvent);
-  WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM,
-                          WIFI_PROV_SECURITY_1, pop, service_name);
-  waitWiFiConnected();
+  // WiFi.setHostname("biuro");
+  // WiFi.setAutoReconnect(true);
+  // WiFi.onEvent(sysProvEvent);
+  // WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM,
+  //                         WIFI_PROV_SECURITY_1, pop, service_name);
+  // waitWiFiConnected();
 
   // setup tasks
   xTaskCreate(taskDeviceControl, "taskDeviceControl", 2048, NULL, 1, NULL);
@@ -67,50 +68,6 @@ void taskDeviceControl(void* pvParameters)
     }
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
-}
-
-/// @brief
-/// Display qr on the screen
-/// @param sys_event
-void sysProvEvent(arduino_event_t* e)
-{
-  switch (e->event_id)
-  {
-  case ARDUINO_EVENT_PROV_START:
-    Serial.println("[prov] start, czekam na telefon");
-    WiFiProv.printQR(service_name, pop, "ble");
-    break;
-  case ARDUINO_EVENT_PROV_CRED_RECV:
-    Serial.printf("[prov] dostałem SSID: %s\n", (const char*)e->event_info.prov_cred_recv.ssid);
-    break;
-  case ARDUINO_EVENT_PROV_CRED_FAIL:
-    Serial.printf("[prov] błąd: %s\n", e->event_info.prov_fail_reason == WIFI_PROV_STA_AUTH_ERROR
-                                           ? "złe hasło"
-                                           : "nie znaleziono sieci");
-    break;
-  case ARDUINO_EVENT_PROV_CRED_SUCCESS:
-    Serial.println("[prov] dane poprawne");
-    break;
-  case ARDUINO_EVENT_PROV_END:
-    Serial.println("[prov] koniec, BLE wyłączone");
-    break;
-  case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    Serial.print("[wifi] IP: ");
-    Serial.println(WiFi.localIP());
-    break;
-  default:
-    break;
-  }
-}
-
-void waitWiFiConnected()
-{
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("Connected to WiFi");
 }
 
 static void makeLedButtonDevice(Node& node)
@@ -156,19 +113,6 @@ void write_callback(Device* device, Param* param, const param_val_t val, void* p
   applyRgb();
   param->updateAndReport(val); // confirm back to the app
 }
-
-// void lightShortTheDiode()
-// {
-//   Serial.println("[rmaker] Zapalam diode na 5s!");
-//   led_device->updateAndReportParam("LED Stan", true);
-//   neopixelWrite(48, 0, 0, 40);
-
-//   vTaskDelay(5 * 1000 / portTICK_PERIOD_MS);
-//   led_device->updateAndReportParam("LED Stan", false);
-//   neopixelWrite(48, 0, 0, 0);
-
-//   Serial.println("[rmaker] Gasze diode!");
-// }
 
 static void applyRgb()
 {
