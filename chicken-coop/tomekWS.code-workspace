@@ -7,6 +7,9 @@
 		{
 			"name": "libraries",
 			"path": "../libraries"
+		},
+		{
+			"path": "../home-automation/ventilation"
 		}
 	],
 	"settings": {}

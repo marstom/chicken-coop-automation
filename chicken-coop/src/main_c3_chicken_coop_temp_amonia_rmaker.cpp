@@ -8,11 +8,13 @@ dns-sd -B _http._tcp
 
 */
 
-#include <Arduino.h>
-#include <WiFi.h>
+#include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_task_wdt.h"
+#include <Arduino.h>
+#include <WiFi.h>
+
+#include <RMaker.h>
 
 // my libs
 #include "secrets.h"
@@ -20,16 +22,24 @@ dns-sd -B _http._tcp
 #include "common/mqtt.h"
 #include "common/ota.h"
 // #include "common/web.h"
-#include "mqtt_comm.h"
-#include "debug_tools/debug_tools.h"
-#include "chicken_coop/tasks.h"
 #include "chicken_coop/constants.h"
+#include "chicken_coop/tasks.h"
 #include "chicken_coop/web.h"
+#include "debug_tools/debug_tools.h"
+#include "mqtt_comm.h"
 #include "wifi_conn_soft_ap.h"
 
 // MQTT broker settings
-const char *mqttHost = MQTT_HOST;
+const char* mqttHost = MQTT_HOST;
 const uint16_t mqttPort = MQTT_PORT;
+
+// rainmaker
+
+static const char* service_name = "PROV_kurnik";
+static const char* pop = POP_CODE; // proof of possession, shown in the QR code
+static Device* coopDevice;
+static void makeCoopDevice(Node& node);
+static void reportTemperature(float t);
 
 // --- Task handles (needed for stack monitoring) ---
 TaskHandle_t hMQTTTask = NULL;
@@ -59,46 +69,73 @@ static debug_tools::MonitoredTask monitoredTasks[] = {
 
 void setup()
 {
-    Serial.begin(9600);
+  Serial.begin(9600);
 
-    // Setup logging
-    debug_tools::logOptions.printToSerial = true;
-    debug_tools::logOptions.logToMqtt = true;
-    debug_tools::logPrefix = chicken_coop::PREFIX;
+  // Setup logging
+  debug_tools::logOptions.printToSerial = true;
+  debug_tools::logOptions.logToMqtt = true;
+  debug_tools::logPrefix = chicken_coop::PREFIX;
 
-    while (!Serial && millis() < 3000)
-    {
-    } // wait a moment for usb
-    wifi::connectToWifiWithSoftAPProvisioning(chicken_coop::MDNS_HOSTNAME, "kurnikService", POP_CODE, true);
+  while (!Serial && millis() < 3000)
+  {
+  } // wait a moment for usb
+  // setup rainmaker before wifi
+  // setup rMaker - must be before provision wifi
+  Node node = RMaker.initNode("Kurnik kontroler");
+  makeCoopDevice(node);
+  RMaker.start();
 
-    chicken_coop::client.setServer(mqttHost, mqttPort);
+  sleep(3);
+  wifi::connectToWifiWithSoftAPProvisioning(chicken_coop::MDNS_HOSTNAME, "kurnikService", POP_CODE,
+                                            true);
 
-    debug_tools::logMessage("Initialize watchdog");
-    esp_task_wdt_init(chicken_coop::WDT_TIMEOUT, true);
+  chicken_coop::client.setServer(mqttHost, mqttPort);
 
-    // Init wireless updates
-    common::ota::setup(chicken_coop::MDNS_HOSTNAME); // must match upload_port in platformio.ini
+  debug_tools::logMessage("Initialize watchdog");
+  esp_task_wdt_init(chicken_coop::WDT_TIMEOUT, true);
 
-    chicken_coop::simpleWebPage(); // run server with web page at 80
-    Serial.println("WebServer started");
-    communication::initQueue();
+  // Init wireless updates
+  common::ota::setup(chicken_coop::MDNS_HOSTNAME); // must match upload_port in platformio.ini
 
-    // main mqtt task
-    xTaskCreatePinnedToCore(common::mqtt::taskMQTT, "taskMQTT", 2048 * 4, &mqttConfig, 1, &hMQTTTask, 0);
-    xTaskCreate(chicken_coop::taskReadBME280, "taskReadBME280", 2048 * 4, NULL, 1, &hBME280Task); // temperature & pressure sensor
-    xTaskCreate(chicken_coop::taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
-    xTaskCreate(chicken_coop::taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
-    // monitoring tasks
-    if constexpr (chicken_coop::ENABLE_MONITORING)
-    {
-        xTaskCreate(debug_tools::taskStackMonitor, "taskStackMonitor", 4096, monitoredTasks, 1, &hStackMonTask); // task monitor
-    }
-    debug_tools::logMessage("Tasks created, watchdog armed!");
+  chicken_coop::simpleWebPage(); // run server with web page at 80
+  Serial.println("WebServer started");
+  communication::initQueue();
+
+  // main mqtt task
+  xTaskCreatePinnedToCore(common::mqtt::taskMQTT, "taskMQTT", 2048 * 4, &mqttConfig, 1, &hMQTTTask,
+                          0);
+  xTaskCreate(chicken_coop::taskReadBME280, "taskReadBME280", 2048 * 4, (void*)reportTemperature, 1,
+              &hBME280Task); // temperature & pressure sensor
+  xTaskCreate(chicken_coop::taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
+  xTaskCreate(chicken_coop::taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
+  // monitoring tasks
+  if constexpr (chicken_coop::ENABLE_MONITORING)
+  {
+    xTaskCreate(debug_tools::taskStackMonitor, "taskStackMonitor", 4096, monitoredTasks, 1,
+                &hStackMonTask); // task monitor
+  }
+  debug_tools::logMessage("Tasks created, watchdog armed!");
 }
 
 void loop()
 {
-    // Keep alive OTA wireless update process.
-    common::ota::handle();
-    delay(2);
+  // Keep alive OTA wireless update process.
+  common::ota::handle();
+  delay(2);
+}
+
+static void makeCoopDevice(Node& node){
+    
+  coopDevice = new Device("Kurnik", "esp.device.other");
+  Param tempParam("Temperatura", ESP_RMAKER_PARAM_TEMPERATURE, value(0.0f), PROP_FLAG_READ);
+  coopDevice->addParam(tempParam);
+  node.addDevice(*coopDevice);
+}
+
+static void reportTemperature(float t){
+    static uint32_t last = 0;
+    if(millis() - last < 30000) return;
+    last = millis();
+    coopDevice->updateAndReportParam("Temperatura", t);
+    
 }
