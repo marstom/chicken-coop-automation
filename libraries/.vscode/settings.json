@@ -1,0 +1,3 @@
+{
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/../chicken-coop/compile_commands.json"
+}

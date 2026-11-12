@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "chicken-coop",
+			"path": "."
+		},
+		{
+			"name": "libraries",
+			"path": "../libraries"
+		}
+	],
+	"settings": {}
+}

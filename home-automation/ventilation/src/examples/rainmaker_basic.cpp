@@ -1,10 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <RMaker.h>
-// #include <WiFi.h>
-// #include <WiFiProv.h>
-
-#include "secrets/secrets_local.h"
 
 // local libs
 #include "uart_utils.h"
@@ -21,7 +17,6 @@ static const char* service_name = "PROV_biuro";
 static const char* pop = "abcd1234"; // proof of possession, shown in the QR code
 
 static Device* led_device;
-static bool diode_on = false;
 
 void taskDeviceControl(void* pvParameters);
 static void makeLedButtonDevice(Node& node);
@@ -29,7 +24,6 @@ static void applyRgb();
 
 void write_callback(Device* device, Param* param, const param_val_t val, void* priv_data,
                     write_ctx_t* ctx);
-// void lightShortTheDiode();
 
 void setup()
 {
@@ -38,18 +32,9 @@ void setup()
   // setup rMaker - must be before provision wifi
   Node node = RMaker.initNode("Biuro Kontroler");
   makeLedButtonDevice(node);
-
   RMaker.start();
 
   wifi::connectToWifiWithProvisioning("biuro", service_name, pop, true);
-
-  // provision wifi
-  // WiFi.setHostname("biuro");
-  // WiFi.setAutoReconnect(true);
-  // WiFi.onEvent(sysProvEvent);
-  // WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM,
-  //                         WIFI_PROV_SECURITY_1, pop, service_name);
-  // waitWiFiConnected();
 
   // setup tasks
   xTaskCreate(taskDeviceControl, "taskDeviceControl", 2048, NULL, 1, NULL);
@@ -61,13 +46,8 @@ void taskDeviceControl(void* pvParameters)
 {
   for (;;)
   {
-    Serial.println("Device Control task started....");
-    if (diode_on)
-    {
-      diode_on = false;
-      // lightShortTheDiode();
-    }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    Serial.println("Device is healthy.");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -80,10 +60,10 @@ static void makeLedButtonDevice(Node& node)
   // toggle.addUIType(ESP_RMAKER_UI_TOGGLE); 
   // led_device->addParam(toggle);
   // led_device->addCb(write_callback);
+  // below, the same effect
   led_device->addPowerParam(false, "Zapal");
 
   // galeczka mala
-
   Param hue_p("Hue", ESP_RMAKER_PARAM_HUE, value(hue), PROP_FLAG_READ | PROP_FLAG_WRITE);
   hue_p.addUIType(ESP_RMAKER_UI_HUE_CIRCLE); // koło zamiast suwaka
   hue_p.addBounds(value(0), value(360), value(1));

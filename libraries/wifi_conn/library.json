@@ -16,6 +16,7 @@
   ],
   "headers": [
     "wifi_conn.h",
+    "wifi_conn_soft_ap.h",
     "wifi_mdns.h"
   ]
 }
