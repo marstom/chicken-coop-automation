@@ -7,6 +7,7 @@ List of all mdns devices is:
 dns-sd -B _http._tcp
 
 */
+#include <math.h>
 
 #include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
@@ -19,7 +20,6 @@ dns-sd -B _http._tcp
 // my libs
 #include "secrets.h"
 #include <chicken_coop/sensor_listener.h>
-
 
 // #include "common/wifi_conn/wifi_conn.h"
 #include "common/mqtt.h"
@@ -70,7 +70,7 @@ static debug_tools::MonitoredTask monitoredTasks[] = {
     {nullptr, nullptr},
 };
 
-class RainMakerReporter: public chicken_coop::SensorListener
+class RainMakerReporter : public chicken_coop::SensorListener
 {
 public:
   void onTemperature(float t) override
@@ -87,16 +87,17 @@ public:
   }
 
 private:
-    uint32_t lastTemp = 0;
-    uint32_t lastHum = 0;
-    uint32_t lastPress = 0;
+  uint32_t lastTemp = 0;
+  uint32_t lastHum = 0;
+  uint32_t lastPress = 0;
 
-    void report(const char* name, float val, uint32_t& last)
-    {
-        if (last !=0 && millis() - last < 60000) return;
-        last = millis();
-        coopDevice->updateAndReportParam(name, val);
-    }
+  void report(const char* name, float val, uint32_t& last)
+  {
+    if (last != 0 && millis() - last < 60000)
+      return;
+    last = millis();
+    coopDevice->updateAndReportParam(name, roundf(val * 10.0f) / 10.0f);
+  }
 };
 
 static RainMakerReporter rainMakerReporter;
@@ -161,43 +162,15 @@ static void makeCoopDevice(Node& node)
 {
 
   coopDevice = new Device("Kurnik", "esp.device.other");
-  Param tempParam("Temperatura", ESP_RMAKER_PARAM_TEMPERATURE, value(0.0f), PROP_FLAG_READ);
+  Param tempParam("Temperatura", ESP_RMAKER_PARAM_TEMPERATURE, value(0.0f),
+                  PROP_FLAG_READ | PROP_FLAG_TIME_SERIES);
   coopDevice->addParam(tempParam);
-  Param humParam("Wilgotnosc", "esp.param.humidity", value(0.0f), PROP_FLAG_READ);
+  Param humParam("Wilgotnosc", "esp.param.humidity", value(0.0f),
+                 PROP_FLAG_READ | PROP_FLAG_TIME_SERIES);
   coopDevice->addParam(humParam);
-  Param pressParam("Cisnienie", "esp.param.pressure", value(0.0f), PROP_FLAG_READ);
+  Param pressParam("Cisnienie", "esp.param.pressure", value(0.0f),
+                   PROP_FLAG_READ | PROP_FLAG_TIME_SERIES);
   coopDevice->addParam(pressParam);
 
   node.addDevice(*coopDevice);
 }
-
-// static void reportTemperature(float t)
-// {
-//   static uint32_t last = 0;
-//   if (millis() - last < 30000)
-//     return;
-//   last = millis();
-//   coopDevice->updateAndReportParam("Temperatura", t);
-// }
-
-// static void reportParam(float val, const char* paramName)
-// {
-//   static uint32_t last = 0;
-//   if (millis() - last < 30000)
-//     return;
-//   last = millis();
-//   coopDevice->updateAndReportParam(paramName, val);
-// }
-
-// class UpdateParameter
-// {
-// public:
-//   static void reportTemperature(float t)
-//   {
-//     static uint32_t last = 0;
-//     if (millis() - last < 30000)
-//       return;
-//     last = millis();
-//     coopDevice->updateAndReportParam("Temperatura", t);
-//   }
-// };
