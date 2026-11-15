@@ -13,7 +13,7 @@
 // WiFiClient net;
 
 WebServer server(80);
-void taskHello(void *pvParameters);
+void taskHello(void* pvParameters);
 
 void setup()
 {
@@ -23,19 +23,23 @@ void setup()
   // http://tomroom/  < - it's working with my router!
   my::connect_to_wifi_with_wait(SSID_OFFICE, WIFI_PASS, "tomroom");
 
-  server.on("/", []() {
-    server.send(200, "text/plain", "<p>Hello from ESP32-S3 Dev Kit!</p><p>Go to <a href=\"/hello\">/hello</a> to see the message from FreeRTOS task.</p>");
-  });
+  server.on("/",
+            []()
+            {
+              server.send(200, "text/plain",
+                          "<p>Hello from ESP32-S3 Dev Kit!</p><p>Go to <a "
+                          "href=\"/hello\">/hello</a> to see the message from FreeRTOS task.</p>");
+            });
 
   // xTaskCreate(taskHello, "taskHello", 4096, NULL, 1, NULL);
 }
 
-void loop() {
-    server.handleClient();
+void loop()
+{
+  server.handleClient();
 }
 
-
-void taskHello(void *pvParameters)
+void taskHello(void* pvParameters)
 {
   while (1)
   {

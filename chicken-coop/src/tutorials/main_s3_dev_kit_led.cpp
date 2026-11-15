@@ -22,7 +22,7 @@
 #define TEMPERATURE_TOPIC "temperature/read"
 
 // My rasberry pi server name
-const char *host = "raspberrypi.local";
+const char* host = "raspberrypi.local";
 WiFiClient net;
 PubSubClient client(net);
 
@@ -33,8 +33,8 @@ Adafruit_NeoPixel strip(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 uint32_t ledColor = 0;
 
 // put function declarations here:
-void taskHandleRGBLed(void *pvParameters);
-void taskReadTemperature(void *pvParameters);
+void taskHandleRGBLed(void* pvParameters);
+void taskReadTemperature(void* pvParameters);
 
 void setup()
 {
@@ -74,7 +74,7 @@ void setup()
 
 void loop() {}
 
-void taskHandleRGBLed(void *pvParameters)
+void taskHandleRGBLed(void* pvParameters)
 {
   uint16_t hue = 0;          // 0–65535 in Adafruit helper
   const uint16_t step = 256; // how fast to move (≈1°/frame)
@@ -90,7 +90,7 @@ void taskHandleRGBLed(void *pvParameters)
   }
 }
 
-void taskReadTemperature(void *pvParameters)
+void taskReadTemperature(void* pvParameters)
 {
   while (1)
   {

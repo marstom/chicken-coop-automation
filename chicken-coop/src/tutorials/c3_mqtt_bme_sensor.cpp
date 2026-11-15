@@ -7,10 +7,10 @@
 #include <HTTPClient.h>
 #include <PubSubClient.h>
 
-#include "wifi_conn.h"
 #include "secrets.h"
-#include <Adafruit_Sensor.h>
+#include "wifi_conn.h"
 #include <Adafruit_BME280.h>
+#include <Adafruit_Sensor.h>
 
 // Constants
 
@@ -38,15 +38,15 @@ unsigned long delayTime;
 #define RELAY_2_TOPIC_W "relay/4/write"
 
 // My rasberry pi server name
-const char *host = "raspberrypi.local";
+const char* host = "raspberrypi.local";
 WiFiClient net;
 PubSubClient client(net);
 
 // put function declarations here:
-void taskHandleRGBLed(void *pvParameters);
-void taskReadTemperature(void *pvParameters);
-void readTemperatureFromBME280(void *pvParameters);
-void relaysControl(void *pvParameters);
+void taskHandleRGBLed(void* pvParameters);
+void taskReadTemperature(void* pvParameters);
+void readTemperatureFromBME280(void* pvParameters);
+void relaysControl(void* pvParameters);
 
 void setup()
 {
@@ -79,7 +79,7 @@ void setup()
 
 void loop() {}
 
-void taskReadTemperature(void *pvParameters)
+void taskReadTemperature(void* pvParameters)
 {
   while (1)
   {
@@ -92,7 +92,7 @@ void taskReadTemperature(void *pvParameters)
   }
 }
 
-void readTemperatureFromBME280(void *pvParameters)
+void readTemperatureFromBME280(void* pvParameters)
 {
   if (!bme.begin(0x77, &Wire))
   {
@@ -125,7 +125,7 @@ void readTemperatureFromBME280(void *pvParameters)
   }
 }
 
-void relaysControl(void *pvParameters)
+void relaysControl(void* pvParameters)
 {
   // control the relays 1 and 2
   pinMode(26, OUTPUT); // TODO check pins

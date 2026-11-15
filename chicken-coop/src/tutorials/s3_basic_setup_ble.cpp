@@ -3,11 +3,12 @@
 
 // Define UUIDs for your service and characteristics
 // Replace these with your actual UUIDs
-const char *serviceUUID = "12345678-1234-1234-1234-123456789ABC";
-const char *dataCharacteristicUUID = "12345678-1234-1234-1234-123456789ABD";
+const char* serviceUUID = "12345678-1234-1234-1234-123456789ABC";
+const char* dataCharacteristicUUID = "12345678-1234-1234-1234-123456789ABD";
 
 BLEService dataService(serviceUUID);
-BLEStringCharacteristic dataCharacteristic(dataCharacteristicUUID, BLERead | BLEWrite, 20); // 20 bytes max
+BLEStringCharacteristic dataCharacteristic(dataCharacteristicUUID, BLERead | BLEWrite,
+                                           20); // 20 bytes max
 
 void setup()
 {
