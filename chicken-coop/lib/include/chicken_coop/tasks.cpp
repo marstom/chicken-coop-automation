@@ -2,13 +2,15 @@
 #include <esp_task_wdt.h>
 #include <Wire.h>
 #include "debug_tools/debug_tools.h"
+#include "chicken_coop/sensor_listener.h"
 
 #include "chicken_coop/tasks.h"
 #include "chicken_coop/constants.h"
 #include "chicken_coop/protocols.h"
 #include <RMaker.h>
 
-using TemperatureCallback = void (*)(float);
+// using TemperatureCallback = void (*)(float);
+
 namespace chicken_coop
 {
 
@@ -20,7 +22,8 @@ PubSubClient client(chicken_coop::net);
 void taskReadBME280(void *pvParameters)
 {
     esp_task_wdt_add(NULL);
-    auto onTemp = reinterpret_cast<TemperatureCallback>(pvParameters);  // może być nullptr
+    auto* listener = static_cast<chicken_coop::SensorListener*>(pvParameters);
+    // auto onTemp = reinterpret_cast<TemperatureCallback>(pvParameters);  // może być nullptr
 
     char buf[16];
     Wire.begin(I2C_SDA, I2C_SCL); // 6 7
@@ -38,7 +41,8 @@ void taskReadBME280(void *pvParameters)
     for (;;)
     {
         float t = bme.readTemperature();
-        if (onTemp) onTemp(t); // if function exists, update rainMaker
+        listener->onTemperature(t);
+        // if (onTemp) onTemp(t); // if function exists, update rainMaker
         snprintf(buf, sizeof(buf), "%.2f", t);
         debug_tools::logMessage("This is the buf content: %s", buf);
         Serial.println(buf);
@@ -47,7 +51,10 @@ void taskReadBME280(void *pvParameters)
         webMsg.setContent(communication::WebMessage::temperature, buf);
         webMsg.sendToQueue();
 
-        snprintf(buf, sizeof(buf), "%.2f", bme.readPressure());
+
+        float p = bme.readPressure();
+        snprintf(buf, sizeof(buf), "%.2f", p);
+        listener->onPressure(p);
         Serial.println(buf);
         msg.setContent(BME_PRESSURE_TOPIC, buf);
         // webMsg.setContent(BME_PRESSURE_TOPIC, buf);
@@ -55,14 +62,10 @@ void taskReadBME280(void *pvParameters)
         webMsg.setContent(communication::WebMessage::pressure, buf);
         webMsg.sendToQueue();
 
-        snprintf(buf, sizeof(buf), "%.2f", bme.readAltitude(SEALEVELPRESSURE_HPA));
-        Serial.println(buf);
-        msg.setContent(BME_ALTITUDE_TOPIC, buf);
-        msg.sendToQueue();
-        webMsg.setContent(communication::WebMessage::altitude, buf);
-        webMsg.sendToQueue();
 
-        snprintf(buf, sizeof(buf), "%.2f", bme.readHumidity());
+        float h = bme.readHumidity();
+        snprintf(buf, sizeof(buf), "%.2f", h);
+        listener->onHumidity(h);
         Serial.println(buf);
         msg.setContent(BME_HUMIDITY_TOPIC, buf);
         msg.sendToQueue();

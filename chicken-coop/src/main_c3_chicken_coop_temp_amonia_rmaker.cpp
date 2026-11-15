@@ -18,6 +18,9 @@ dns-sd -B _http._tcp
 
 // my libs
 #include "secrets.h"
+#include <chicken_coop/sensor_listener.h>
+
+
 // #include "common/wifi_conn/wifi_conn.h"
 #include "common/mqtt.h"
 #include "common/ota.h"
@@ -39,7 +42,7 @@ static const char* service_name = "PROV_kurnik";
 static const char* pop = POP_CODE; // proof of possession, shown in the QR code
 static Device* coopDevice;
 static void makeCoopDevice(Node& node);
-static void reportTemperature(float t);
+// static void reportTemperature(float t);
 
 // --- Task handles (needed for stack monitoring) ---
 TaskHandle_t hMQTTTask = NULL;
@@ -67,6 +70,36 @@ static debug_tools::MonitoredTask monitoredTasks[] = {
     {nullptr, nullptr},
 };
 
+class RainMakerReporter: public chicken_coop::SensorListener
+{
+public:
+  void onTemperature(float t) override
+  {
+    report("Temperatura", t, lastTemp);
+  }
+  void onHumidity(float h) override
+  {
+    report("Wilgotnosc", h, lastHum);
+  }
+  void onPressure(float p) override
+  {
+    report("Cisnienie", p, lastPress);
+  }
+
+private:
+    uint32_t lastTemp = 0;
+    uint32_t lastHum = 0;
+    uint32_t lastPress = 0;
+
+    void report(const char* name, float val, uint32_t& last)
+    {
+        if (last !=0 && millis() - last < 60000) return;
+        last = millis();
+        coopDevice->updateAndReportParam(name, val);
+    }
+};
+
+static RainMakerReporter rainMakerReporter;
 void setup()
 {
   Serial.begin(9600);
@@ -104,7 +137,7 @@ void setup()
   // main mqtt task
   xTaskCreatePinnedToCore(common::mqtt::taskMQTT, "taskMQTT", 2048 * 4, &mqttConfig, 1, &hMQTTTask,
                           0);
-  xTaskCreate(chicken_coop::taskReadBME280, "taskReadBME280", 2048 * 4, (void*)reportTemperature, 1,
+  xTaskCreate(chicken_coop::taskReadBME280, "taskReadBME280", 2048 * 4, &rainMakerReporter, 1,
               &hBME280Task); // temperature & pressure sensor
   xTaskCreate(chicken_coop::taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
   xTaskCreate(chicken_coop::taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
@@ -124,18 +157,47 @@ void loop()
   delay(2);
 }
 
-static void makeCoopDevice(Node& node){
-    
+static void makeCoopDevice(Node& node)
+{
+
   coopDevice = new Device("Kurnik", "esp.device.other");
   Param tempParam("Temperatura", ESP_RMAKER_PARAM_TEMPERATURE, value(0.0f), PROP_FLAG_READ);
   coopDevice->addParam(tempParam);
+  Param humParam("Wilgotnosc", "esp.param.humidity", value(0.0f), PROP_FLAG_READ);
+  coopDevice->addParam(humParam);
+  Param pressParam("Cisnienie", "esp.param.pressure", value(0.0f), PROP_FLAG_READ);
+  coopDevice->addParam(pressParam);
+
   node.addDevice(*coopDevice);
 }
 
-static void reportTemperature(float t){
-    static uint32_t last = 0;
-    if(millis() - last < 30000) return;
-    last = millis();
-    coopDevice->updateAndReportParam("Temperatura", t);
-    
-}
+// static void reportTemperature(float t)
+// {
+//   static uint32_t last = 0;
+//   if (millis() - last < 30000)
+//     return;
+//   last = millis();
+//   coopDevice->updateAndReportParam("Temperatura", t);
+// }
+
+// static void reportParam(float val, const char* paramName)
+// {
+//   static uint32_t last = 0;
+//   if (millis() - last < 30000)
+//     return;
+//   last = millis();
+//   coopDevice->updateAndReportParam(paramName, val);
+// }
+
+// class UpdateParameter
+// {
+// public:
+//   static void reportTemperature(float t)
+//   {
+//     static uint32_t last = 0;
+//     if (millis() - last < 30000)
+//       return;
+//     last = millis();
+//     coopDevice->updateAndReportParam("Temperatura", t);
+//   }
+// };
