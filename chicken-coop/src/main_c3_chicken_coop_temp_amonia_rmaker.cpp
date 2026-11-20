@@ -85,11 +85,16 @@ public:
   {
     report("Cisnienie", p, lastPress);
   }
+  void onAmoniaSensor(float a) override
+  {
+    report("Amonia", a, lastAmonia);
+  }
 
 private:
   uint32_t lastTemp = 0;
   uint32_t lastHum = 0;
   uint32_t lastPress = 0;
+  uint32_t lastAmonia = 0;
 
   void report(const char* name, float val, uint32_t& last)
   {
@@ -141,7 +146,8 @@ void setup()
   xTaskCreate(chicken_coop::taskReadBME280, "taskReadBME280", 2048 * 4, &rainMakerReporter, 1,
               &hBME280Task); // temperature & pressure sensor
   xTaskCreate(chicken_coop::taskWebServer, "taskWebServer", 4096 * 2, NULL, 1, &hWebServerTask);
-  xTaskCreate(chicken_coop::taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, NULL, 1, NULL);
+  xTaskCreate(chicken_coop::taskAmoniaSensor, "taskAmoniaSensor", 2048 * 4, &rainMakerReporter, 1,
+              NULL);
   // monitoring tasks
   if constexpr (chicken_coop::ENABLE_MONITORING)
   {
@@ -171,6 +177,13 @@ static void makeCoopDevice(Node& node)
   Param pressParam("Cisnienie", "esp.param.pressure", value(0.0f),
                    PROP_FLAG_READ | PROP_FLAG_TIME_SERIES);
   coopDevice->addParam(pressParam);
+
+  Param progiParam("Progi", "esp.param.amonia-thresholds",
+                   value("<1.5 OK | 1.5-2.5 przewietrz | >2.5 sciolka"), PROP_FLAG_READ);
+  coopDevice->addParam(progiParam);
+  Param amoniaParam("Amonia", "esp.param.other", value(0.0f),
+                    PROP_FLAG_READ | PROP_FLAG_TIME_SERIES);
+  coopDevice->addParam(amoniaParam);
 
   node.addDevice(*coopDevice);
 }
